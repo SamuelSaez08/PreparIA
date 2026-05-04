@@ -1,0 +1,1061 @@
+/* ============================================================
+   PreparIA — ranking.css
+   Estilos para la página de ranking, podio y rachas.
+   Extiende (no sobreescribe) las variables de styles.css.
+   ============================================================ */
+
+/* ── Variables locales de ranking ───────────────────────── */
+:root {
+  --gold:          #FFD700;
+  --gold-dark:     #C9A800;
+  --gold-glow:     rgba(255, 215, 0, 0.18);
+  --silver:        #C0C0C0;
+  --silver-glow:   rgba(192, 192, 192, 0.12);
+  --bronze:        #CD7F32;
+  --bronze-glow:   rgba(205, 127, 50, 0.12);
+}
+
+/* ── Keyframes ───────────────────────────────────────────── */
+
+/* 1er lugar: baja desde arriba con aterrizaje elástico */
+@keyframes podium-enter-center {
+  0%   { opacity: 0; transform: translateY(-60px) scale(0.82); }
+  60%  { opacity: 1; transform: translateY(6px) scale(1.04); }
+  80%  { transform: translateY(-2px) scale(0.98); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* 2° y 3° lugar: suben desde abajo */
+@keyframes podium-enter-side {
+  from { opacity: 0; transform: translateY(40px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Barrido de brillo sobre la medalla de oro */
+@keyframes shimmer-gold {
+  0%   { left: -120%; }
+  100% { left: 160%; }
+}
+
+/* Pulso del ícono de fuego */
+@keyframes fire-pulse {
+  0%, 100% { transform: scale(1); }
+  50%       { transform: scale(1.18) rotate(-3deg); }
+}
+
+/* Entrada de filas con stagger */
+@keyframes row-enter {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Pop al terminar un contador animado */
+@keyframes counter-pop {
+  0%   { transform: scale(1); }
+  45%  { transform: scale(1.28); }
+  100% { transform: scale(1); }
+}
+
+/* Rebote del escudo */
+@keyframes shield-bounce {
+  0%, 100% { transform: translateY(0); }
+  40%       { transform: translateY(-7px); }
+  70%       { transform: translateY(-3px); }
+}
+
+/* Entrada del toast desde la derecha */
+@keyframes toast-slide-in {
+  from { opacity: 0; transform: translateX(110%) scale(0.95); }
+  to   { opacity: 1; transform: translateX(0) scale(1); }
+}
+
+/* Salida del toast hacia la derecha */
+@keyframes toast-slide-out {
+  from { opacity: 1; transform: translateX(0) scale(1); }
+  to   { opacity: 0; transform: translateX(110%) scale(0.95); }
+}
+
+/* Sacudida para racha rota */
+@keyframes toast-shake {
+  0%, 100% { transform: translateX(0); }
+  20%       { transform: translateX(-10px); }
+  40%       { transform: translateX(10px); }
+  60%       { transform: translateX(-6px); }
+  80%       { transform: translateX(6px); }
+}
+
+/* Barra de progreso del toast que se agota */
+@keyframes toast-timer {
+  from { transform: scaleX(1); }
+  to   { transform: scaleX(0); }
+}
+
+/* Confetti para celebración de hito de racha */
+@keyframes confetti-fall {
+  0%   { transform: translateY(0) rotate(0deg) scale(1); opacity: 1; }
+  100% { transform: translateY(90px) rotate(720deg) scale(0.5); opacity: 0; }
+}
+
+/* ── Layout de la página de ranking ─────────────────────── */
+.ranking-layout {
+  display: grid;
+  grid-template-columns: 1fr 300px;
+  gap: 24px;
+  align-items: start;
+}
+
+/* ── Tabs de período ─────────────────────────────────────── */
+.ranking-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+
+.tab-btn {
+  flex: 1;
+  padding: 10px 12px;
+  background: var(--ink-soft);
+  border: 2px solid rgba(245,245,240,0.15);
+  border-radius: var(--radius-md);
+  color: rgba(245,245,240,0.5);
+  font-family: var(--font);
+  font-size: 0.8rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all var(--transition);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+}
+.tab-btn:hover {
+  border-color: rgba(191,255,0,0.5);
+  color: var(--white);
+}
+.tab-btn.active {
+  background: var(--acid);
+  border-color: var(--acid);
+  color: var(--ink);
+  box-shadow: var(--shadow-solid-sm);
+}
+
+/* ── Sección de podio ────────────────────────────────────── */
+.podium-section {
+  margin-bottom: 40px;
+}
+
+.section-eyebrow {
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(245,245,240,0.35);
+  margin-bottom: 20px;
+}
+
+.podium-container {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 12px;
+  min-height: 300px;
+}
+
+/* Cada columna del podio empieza invisible; la animación la muestra */
+.podium-slot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+  max-width: 190px;
+  opacity: 0;
+}
+
+/* 3° entra primero, 2° segundo, 1° último desde arriba */
+.podium-slot.pos-3 { animation: podium-enter-side 0.55s ease 0.05s forwards; }
+.podium-slot.pos-2 { animation: podium-enter-side 0.55s ease 0.2s  forwards; }
+.podium-slot.pos-1 { animation: podium-enter-center 0.75s cubic-bezier(0.34, 1.56, 0.64, 1) 0.38s forwards; }
+
+/* Medalla SVG con shimmer solo para oro */
+.podium-medal {
+  position: relative;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.medal-shimmer-layer {
+  position: absolute;
+  top: 0; bottom: 0;
+  width: 40%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.45), transparent);
+  transform: skewX(-15deg);
+  animation: shimmer-gold 2.8s ease-in-out infinite;
+  pointer-events: none;
+  border-radius: 50%;
+}
+
+/* Avatar circular con inicial */
+.podium-avatar {
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  border: 3px solid;
+  margin-bottom: 10px;
+  transition: box-shadow 0.3s;
+}
+
+.pos-1 .podium-avatar {
+  width: 72px; height: 72px; font-size: 1.6rem;
+  background: var(--gold-glow);
+  border-color: var(--gold);
+  color: var(--gold);
+  box-shadow: 0 0 24px var(--gold-glow), 0 0 8px rgba(255,215,0,0.3);
+}
+.pos-2 .podium-avatar {
+  width: 60px; height: 60px; font-size: 1.35rem;
+  background: var(--silver-glow);
+  border-color: var(--silver);
+  color: var(--silver);
+}
+.pos-3 .podium-avatar {
+  width: 54px; height: 54px; font-size: 1.2rem;
+  background: var(--bronze-glow);
+  border-color: var(--bronze);
+  color: var(--bronze);
+}
+
+.podium-name {
+  font-size: 0.85rem;
+  font-weight: 800;
+  text-align: center;
+  margin-bottom: 2px;
+  max-width: 130px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.podium-points {
+  font-size: 1.5rem;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  line-height: 1;
+  margin-bottom: 2px;
+}
+.pos-1 .podium-points { color: var(--gold);   font-size: 1.8rem; }
+.pos-2 .podium-points { color: var(--silver); }
+.pos-3 .podium-points { color: var(--bronze); }
+
+/* Clase que se añade al terminar el counter */
+.counter-done { animation: counter-pop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1); }
+
+.podium-pts-label {
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(245,245,240,0.3);
+  margin-bottom: 14px;
+}
+
+/* Base física del podio — alturas diferentes por posición */
+.podium-base {
+  width: 100%;
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 14px;
+  font-size: 1.1rem;
+  font-weight: 900;
+}
+
+.pos-1 .podium-base {
+  height: 110px;
+  background: linear-gradient(180deg, var(--gold-glow), rgba(255,215,0,0.03));
+  border: 2px solid var(--gold);
+  border-bottom: none;
+  color: var(--gold);
+}
+.pos-2 .podium-base {
+  height: 76px;
+  background: linear-gradient(180deg, var(--silver-glow), rgba(192,192,192,0.02));
+  border: 2px solid var(--silver);
+  border-bottom: none;
+  color: var(--silver);
+}
+.pos-3 .podium-base {
+  height: 50px;
+  background: linear-gradient(180deg, var(--bronze-glow), rgba(205,127,50,0.02));
+  border: 2px solid var(--bronze);
+  border-bottom: none;
+  color: var(--bronze);
+}
+
+/* ── Tabla de leaderboard ────────────────────────────────── */
+
+/* Wrapper con fade para cambio de período */
+.lb-table-wrap {
+  opacity: 1;
+  transition: opacity 0.22s ease;
+}
+.lb-table-wrap.fading { opacity: 0; }
+
+.lb-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0 5px;
+}
+
+.lb-table th {
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(245,245,240,0.32);
+  padding: 6px 16px;
+  text-align: left;
+}
+.lb-table th:nth-child(3),
+.lb-table th:nth-child(4),
+.lb-table th:last-child { text-align: right; }
+
+/* Cada fila empieza invisible y se anima con stagger via JS */
+.lb-row td {
+  padding: 13px 16px;
+  background: var(--ink-soft);
+  font-size: 0.9rem;
+  font-weight: 500;
+  vertical-align: middle;
+  opacity: 0;
+  animation: row-enter 0.38s ease forwards;
+}
+.lb-row td:first-child { border-radius: var(--radius-md) 0 0 var(--radius-md); }
+.lb-row td:last-child  {
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+  text-align: right;
+}
+.lb-row:hover td { background: var(--ink-muted); cursor: default; }
+
+/* Fila destacada del usuario autenticado */
+.lb-row.is-me td {
+  background: var(--acid-glow) !important;
+}
+.lb-row.is-me td:first-child {
+  border-left: 3px solid var(--acid);
+  padding-left: 13px;
+}
+
+/* Número de posición */
+.lb-rank {
+  font-size: 0.82rem;
+  font-weight: 800;
+  color: rgba(245,245,240,0.35);
+  min-width: 36px;
+}
+
+/* Avatar + nombre combinados */
+.lb-user-cell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.lb-avatar {
+  width: 34px; height: 34px;
+  border-radius: 50%;
+  background: var(--ink-muted);
+  border: 2px solid rgba(245,245,240,0.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: rgba(245,245,240,0.6);
+  flex-shrink: 0;
+}
+.lb-row.is-me .lb-avatar {
+  background: var(--acid-glow);
+  border-color: var(--acid);
+  color: var(--acid);
+}
+
+.lb-name { font-weight: 700; font-size: 0.88rem; }
+.lb-name-me { color: var(--acid); }
+
+.lb-points-cell {
+  font-weight: 800;
+  color: var(--acid);
+  font-size: 0.95rem;
+  text-align: right;
+}
+
+.lb-streak-cell {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 5px;
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
+.fire-icon {
+  display: inline-block;
+  animation: fire-pulse 1.9s ease-in-out infinite;
+  font-style: normal;
+}
+
+/* ── Panel lateral del usuario ───────────────────────────── */
+.user-rank-panel {
+  background: var(--ink-soft);
+  border: 2px solid var(--acid);
+  border-radius: var(--radius-xl);
+  padding: 26px;
+  box-shadow: var(--shadow-solid-lg);
+  position: sticky;
+  top: 88px;
+}
+
+.ur-eyebrow {
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--acid);
+  margin-bottom: 18px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ur-position-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 22px;
+}
+
+.ur-pos-number {
+  font-size: 3.4rem;
+  font-weight: 800;
+  letter-spacing: -0.06em;
+  color: var(--acid);
+  line-height: 1;
+}
+
+.ur-pos-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: rgba(245,245,240,0.35);
+  line-height: 1.3;
+}
+
+.ur-divider {
+  height: 1px;
+  background: rgba(245,245,240,0.07);
+  margin: 16px 0;
+}
+
+/* Bloque de estadística individual del panel */
+.ur-stat { margin-bottom: 18px; }
+.ur-stat-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: rgba(245,245,240,0.35);
+  margin-bottom: 6px;
+}
+
+/* Racha con ícono de fuego */
+.ur-streak-display {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 2rem;
+  font-weight: 800;
+  color: var(--amber);
+  letter-spacing: -0.04em;
+}
+.ur-streak-fire {
+  font-size: 1.5rem;
+  animation: fire-pulse 1.9s ease-in-out infinite;
+  display: inline-block;
+}
+
+/* Barra de progreso hacia el siguiente competidor */
+.ur-next-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: rgba(245,245,240,0.4);
+  margin-bottom: 6px;
+}
+.ur-next-bar {
+  background: rgba(245,245,240,0.08);
+  border-radius: 100px;
+  height: 7px;
+  overflow: hidden;
+}
+.ur-next-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--acid-dark), var(--acid));
+  border-radius: 100px;
+  width: 0;
+  transition: width 1.3s cubic-bezier(0.34, 1.56, 0.64, 1) 0.6s;
+}
+
+/* Escudos disponibles */
+.ur-shields-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.shield-icon {
+  font-size: 1.3rem;
+  display: inline-block;
+  animation: shield-bounce 2.6s ease-in-out infinite;
+}
+.shield-icon:nth-child(2) { animation-delay: 0.35s; }
+.shield-icon:nth-child(3) { animation-delay: 0.7s; }
+.shield-empty {
+  width: 26px; height: 26px;
+  border: 2px dashed rgba(245,245,240,0.18);
+  border-radius: var(--radius-sm);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  color: rgba(245,245,240,0.18);
+}
+.ur-no-shields {
+  font-size: 0.8rem;
+  color: rgba(245,245,240,0.3);
+  font-style: italic;
+}
+
+/* ── Estado vacío ────────────────────────────────────────── */
+.empty-state {
+  text-align: center;
+  padding: 48px 24px;
+  color: rgba(245,245,240,0.35);
+}
+.empty-state .empty-icon { font-size: 2.5rem; margin-bottom: 12px; }
+.empty-state p { font-size: 0.9rem; }
+
+/* ── Estado de error inline ──────────────────────────────── */
+.error-state {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: rgba(255,107,107,0.08);
+  border: 2px solid var(--coral);
+  border-radius: var(--radius-md);
+  padding: 14px 18px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--coral);
+}
+
+/* ── Skeletons ───────────────────────────────────────────── */
+.skeleton-podium-wrap {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 12px;
+  min-height: 280px;
+}
+.skeleton-podium-slot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  max-width: 180px;
+}
+.sk-circle  { border-radius: 50%; }
+.sk-rect    { border-radius: var(--radius-sm); }
+.sk-w-full  { width: 100%; }
+.sk-h-s     { height: 12px; width: 70px; }
+.sk-h-m     { height: 20px; width: 50px; }
+.sk-h-base1 { height: 110px; border-radius: 12px 12px 0 0; width: 100%; }
+.sk-h-base2 { height: 76px;  border-radius: 12px 12px 0 0; width: 100%; }
+.sk-h-base3 { height: 50px;  border-radius: 12px 12px 0 0; width: 100%; }
+.sk-avatar-lg { width: 72px; height: 72px; }
+.sk-avatar-md { width: 60px; height: 60px; }
+.sk-avatar-sm { width: 54px; height: 54px; }
+
+.skeleton-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  background: var(--ink-soft);
+  border-radius: var(--radius-md);
+  margin-bottom: 5px;
+}
+.sk-circle-sm { width: 34px; height: 34px; border-radius: 50%; }
+
+/* ── Responsive ──────────────────────────────────────────── */
+@media (max-width: 1024px) {
+  .ranking-layout {
+    grid-template-columns: 1fr;
+  }
+  .user-rank-panel {
+    position: static;
+    /* El panel va arriba del leaderboard en mobile */
+  }
+}
+
+@media (max-width: 768px) {
+  .podium-container {
+    gap: 6px;
+    min-height: 220px;
+  }
+  .podium-name { font-size: 0.75rem; }
+  .pos-1 .podium-base { height: 80px; }
+  .pos-2 .podium-base { height: 56px; }
+  .pos-3 .podium-base { height: 36px; }
+  .pos-1 .podium-avatar { width: 56px; height: 56px; font-size: 1.3rem; }
+  .ranking-tabs { flex-wrap: wrap; }
+  .tab-btn { font-size: 0.72rem; padding: 9px 8px; }
+}
+
+/* ── prefers-reduced-motion ──────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ── Confetti keyframe with CSS custom-property offsets ──── */
+@keyframes confetti-fall {
+  0%   { transform: translate(0, 0) rotate(0deg) scale(1); opacity: 1; }
+  100% { transform: translate(var(--dx, 80px), var(--dy, 60px)) rotate(720deg) scale(0.3); opacity: 0; }
+}
+
+.confetti-container { pointer-events: none; position: fixed; inset: 0; z-index: 9998; overflow: hidden; }
+.confetti-piece     { position: fixed; pointer-events: none; z-index: 9999; }
+
+/* ── Podium — positional aliases (position-N → pos-N) ────── */
+.podium-slot.position-1 { animation: podium-enter-center 0.75s cubic-bezier(0.34,1.56,0.64,1) 0.38s forwards; }
+.podium-slot.position-2 { animation: podium-enter-side 0.55s ease 0.2s  forwards; }
+.podium-slot.position-3 { animation: podium-enter-side 0.55s ease 0.05s forwards; }
+
+.podium-slot.position-1 .podium-avatar {
+  width: 72px; height: 72px; font-size: 1.6rem;
+  background: var(--gold-glow);
+  border: 3px solid var(--gold);
+  color: var(--gold);
+  box-shadow: 0 0 24px var(--gold-glow), 0 0 8px rgba(255,215,0,0.3);
+}
+.podium-slot.position-2 .podium-avatar {
+  width: 60px; height: 60px; font-size: 1.35rem;
+  background: var(--silver-glow);
+  border: 3px solid var(--silver);
+  color: var(--silver);
+}
+.podium-slot.position-3 .podium-avatar {
+  width: 54px; height: 54px; font-size: 1.2rem;
+  background: var(--bronze-glow);
+  border: 3px solid var(--bronze);
+  color: var(--bronze);
+}
+
+.podium-slot.position-1 .podium-points { color: var(--gold);   font-size: 1.5rem; }
+.podium-slot.position-2 .podium-points { color: var(--silver); font-size: 1.2rem; }
+.podium-slot.position-3 .podium-points { color: var(--bronze); font-size: 1.1rem; }
+
+.podium-points {
+  font-size: 1.1rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  margin-bottom: 2px;
+}
+
+.podium-crown {
+  font-size: 1.4rem;
+  margin-bottom: 4px;
+  animation: fire-pulse 2s ease-in-out infinite;
+  display: block;
+}
+
+.podium-stand {
+  width: 100%;
+  min-height: 50px;
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 10px;
+  font-size: 1.3rem;
+  font-weight: 900;
+  margin-top: 10px;
+}
+
+.podium-slot.position-1 .podium-stand {
+  min-height: 110px;
+  background: linear-gradient(180deg, var(--gold-glow), rgba(255,215,0,0.03));
+  border: 2px solid var(--gold);
+  border-bottom: none;
+}
+.podium-slot.position-2 .podium-stand {
+  min-height: 76px;
+  background: linear-gradient(180deg, var(--silver-glow), rgba(192,192,192,0.02));
+  border: 2px solid var(--silver);
+  border-bottom: none;
+}
+.podium-slot.position-3 .podium-stand {
+  min-height: 50px;
+  background: linear-gradient(180deg, var(--bronze-glow), rgba(205,127,50,0.02));
+  border: 2px solid var(--bronze);
+  border-bottom: none;
+}
+
+.podium-slot.is-me .podium-avatar { box-shadow: 0 0 0 3px var(--acid); }
+.skeleton-slot .podium-avatar { background: var(--ink-muted); color: transparent; border-color: transparent; }
+
+/* ── Leaderboard — div-based rows ───────────────────────── */
+.lb-table  { display: flex; flex-direction: column; gap: 5px; }
+
+.lb-header {
+  display: grid;
+  grid-template-columns: 40px 1fr 80px 80px;
+  gap: 8px;
+  padding: 4px 16px 8px;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(245,245,240,0.32);
+}
+.lb-header span:nth-child(3),
+.lb-header span:nth-child(4) { text-align: right; }
+
+.lb-row {
+  display: grid;
+  grid-template-columns: 40px 1fr 80px 80px;
+  gap: 8px;
+  align-items: center;
+  padding: 12px 16px;
+  background: var(--ink-soft);
+  border-radius: var(--radius-md);
+  font-size: 0.88rem;
+  font-weight: 500;
+  opacity: 0;
+  animation: row-enter 0.38s ease forwards;
+  transition: background 0.18s;
+}
+.lb-row:hover { background: var(--ink-muted); }
+
+.lb-row.is-me {
+  background: var(--acid-glow) !important;
+  border-left: 3px solid var(--acid);
+  padding-left: 13px;
+}
+
+.lb-rank {
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: rgba(245,245,240,0.35);
+}
+
+.lb-user {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  overflow: hidden;
+}
+
+.lb-name {
+  font-weight: 700;
+  font-size: 0.88rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.lb-row.is-me .lb-name { color: var(--acid); }
+
+.lb-streak {
+  text-align: right;
+  font-weight: 700;
+  font-size: 0.88rem;
+}
+
+.lb-pts {
+  text-align: right;
+  font-weight: 800;
+  color: var(--acid);
+  font-size: 0.92rem;
+}
+
+.streak-fire { display: inline-flex; align-items: center; gap: 2px; color: var(--amber); }
+
+.you-badge {
+  display: inline-block;
+  background: var(--acid);
+  color: var(--ink);
+  font-size: 0.62rem;
+  font-weight: 900;
+  padding: 1px 5px;
+  border-radius: 100px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-left: 5px;
+  vertical-align: middle;
+}
+
+/* Fix skeleton-row for div layout */
+.lb-row.skeleton-row {
+  display: block;
+  padding: 0;
+  animation: none;
+  opacity: 1;
+}
+
+/* ── Right panel — rank card ─────────────────────────────── */
+.rank-card {
+  background: var(--ink-muted);
+  border-radius: var(--radius-lg);
+  padding: 18px;
+  margin-bottom: 16px;
+}
+.rank-card-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.rank-avatar {
+  width: 44px; height: 44px;
+  border-radius: 50%;
+  background: var(--acid);
+  color: var(--ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  font-weight: 800;
+  flex-shrink: 0;
+  border: 2px solid var(--acid-dark, #99cc00);
+}
+.rank-name  { font-weight: 800; font-size: 0.92rem; line-height: 1.2; }
+.rank-label { font-size: 0.72rem; }
+.rank-badge {
+  margin-left: auto;
+  font-size: 1.6rem;
+  font-weight: 900;
+  color: var(--acid);
+  letter-spacing: -0.06em;
+  flex-shrink: 0;
+}
+
+.rank-stats-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.rank-stat { text-align: center; }
+.rank-stat-value {
+  font-size: 1.5rem;
+  font-weight: 800;
+  letter-spacing: -0.05em;
+  line-height: 1;
+  margin-bottom: 2px;
+}
+.rank-stat-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: rgba(245,245,240,0.35);
+}
+
+/* ── Streak panel (within right panel) ───────────────────── */
+.streak-panel {
+  background: var(--ink-muted);
+  border-radius: var(--radius-lg);
+  padding: 16px;
+  margin-bottom: 16px;
+}
+.streak-count {
+  font-size: 1.6rem;
+  font-weight: 900;
+  color: var(--amber);
+  letter-spacing: -0.05em;
+}
+
+/* ── Streak widget internals ─────────────────────────────── */
+.streak-calendar {
+  display: flex;
+  gap: 6px;
+  justify-content: space-between;
+  margin-top: 8px;
+}
+.streak-day {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.streak-day-circle {
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.72rem;
+  font-weight: 700;
+  background: rgba(245,245,240,0.06);
+  border: 2px solid rgba(245,245,240,0.1);
+  color: rgba(245,245,240,0.35);
+  transition: all 0.25s;
+}
+.streak-day.active .streak-day-circle {
+  background: var(--acid);
+  border-color: var(--acid);
+  color: var(--ink);
+  font-size: 0.8rem;
+}
+.streak-day.today .streak-day-circle {
+  border-color: var(--acid);
+  color: var(--acid);
+}
+.streak-day.active.today .streak-day-circle {
+  box-shadow: 0 0 0 3px var(--acid-glow);
+}
+.streak-day-label {
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: rgba(245,245,240,0.3);
+  text-transform: uppercase;
+}
+.streak-message {
+  font-size: 0.78rem;
+  color: rgba(245,245,240,0.45);
+  margin-top: 10px;
+  text-align: center;
+}
+
+.streak-zero-cta {
+  text-align: center;
+  padding: 12px 0;
+}
+.streak-zero-emoji { font-size: 2rem; margin-bottom: 8px; }
+.streak-zero-text  { font-size: 0.8rem; color: rgba(245,245,240,0.5); line-height: 1.5; }
+
+/* ── Shields panel ───────────────────────────────────────── */
+.shields-panel {
+  background: var(--ink-muted);
+  border-radius: var(--radius-lg);
+  padding: 14px 16px;
+  margin-bottom: 16px;
+}
+.shields-title {
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: rgba(245,245,240,0.6);
+  margin-bottom: 4px;
+}
+.shields-info { font-size: 0.85rem; font-weight: 700; }
+
+/* ── Toast notifications ─────────────────────────────────── */
+.toast-container {
+  position: fixed;
+  top: 80px;
+  right: 20px;
+  z-index: 10000;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  pointer-events: none;
+  max-width: 320px;
+}
+
+.points-toast {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--ink-soft);
+  border: 2px solid rgba(191,255,0,0.4);
+  border-radius: var(--radius-lg);
+  padding: 14px 16px;
+  box-shadow: 4px 4px 0px var(--acid);
+  pointer-events: auto;
+  position: relative;
+  overflow: hidden;
+  opacity: 0;
+  transform: translateX(110%) scale(0.95);
+  transition: none;
+}
+.points-toast.toast-visible {
+  animation: toast-slide-in 0.4s cubic-bezier(0.34,1.56,0.64,1) forwards;
+}
+.points-toast.toast-leaving {
+  animation: toast-slide-out 0.3s ease forwards;
+}
+.points-toast.toast-streak-broke { border-color: rgba(255,107,107,0.5); box-shadow: 4px 4px 0px var(--coral); }
+.points-toast.toast-streak-broke.toast-shake { animation: toast-shake 0.5s ease, toast-slide-in 0.4s cubic-bezier(0.34,1.56,0.64,1); }
+.points-toast.toast-bonus  { border-color: rgba(255,217,61,0.5); box-shadow: 4px 4px 0px var(--amber); }
+.points-toast.toast-perfect { border-color: rgba(78,205,196,0.5); box-shadow: 4px 4px 0px var(--sky); }
+
+.toast-icon   { font-size: 1.5rem; flex-shrink: 0; }
+.toast-body   { flex: 1; min-width: 0; }
+.toast-title  { font-weight: 800; font-size: 0.9rem; line-height: 1.2; }
+.toast-subtitle { font-size: 0.76rem; color: rgba(245,245,240,0.5); margin-top: 2px; }
+
+.toast-close {
+  background: none;
+  border: none;
+  color: rgba(245,245,240,0.35);
+  font-size: 1.1rem;
+  cursor: pointer;
+  flex-shrink: 0;
+  padding: 0;
+  line-height: 1;
+  transition: color 0.15s;
+}
+.toast-close:hover { color: var(--white); }
+
+.toast-timer {
+  position: absolute;
+  bottom: 0; left: 0;
+  height: 3px;
+  width: 100%;
+  background: var(--acid);
+  transform-origin: left;
+  animation: toast-timer 4s linear forwards;
+}
+.points-toast.toast-streak-broke .toast-timer { background: var(--coral); }
+.points-toast.toast-bonus  .toast-timer { background: var(--amber); }
+.points-toast.toast-perfect .toast-timer { background: var(--sky); }
+
+/* ── Empty / error states — flex variant ────────────────── */
+#lb-empty, #lb-error {
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ── Mobile responsive additions ─────────────────────────── */
+@media (max-width: 768px) {
+  .lb-header, .lb-row {
+    grid-template-columns: 36px 1fr 60px 64px;
+    font-size: 0.82rem;
+  }
+  .rank-stats-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .toast-container { right: 12px; max-width: calc(100vw - 24px); }
+  .user-rank-panel { order: -1; }
+}

@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(xargs wc *)",
+      "Bash(npx knex *)",
+      "Bash(node -e ' *)",
+      "Bash(node server.js)",
+      "Bash(curl -s 'http://localhost:3000/api/v1/ranking?period=all_time' -H 'Authorization: Bearer __TRACKED_VAR__')",
+      "Bash(node -e \"const d=require\\('fs'\\).readFileSync\\('/dev/stdin','utf8'\\); const j=JSON.parse\\(d\\); console.log\\('stats ok:', j.ok\\); console.log\\('stats keys:', Object.keys\\(j.datos || {}\\)\\); console.log\\('historial sample:', JSON.stringify\\(\\(j.datos?.historial_actividad_30d||[]\\).slice\\(0,2\\)\\)\\);\")",
+      "Bash(kill %1)",
+      "Bash(npm install *)",
+      "PowerShell(Test-NetConnection -ComputerName db.eajateyhrufsggshxppq.supabase.co -Port 5432 -WarningAction SilentlyContinue)",
+      "PowerShell(Test-NetConnection -ComputerName db.eajateyhrufsggshxppq.supabase.co -Port 6543 -WarningAction SilentlyContinue)",
+      "PowerShell($result = Test-NetConnection -ComputerName db.eajateyhrufsggshxppq.supabase.co -Port 5432; \"5432=\" + $result.TcpTestSucceeded)",
+      "PowerShell($result = Test-NetConnection -ComputerName db.eajateyhrufsggshxppq.supabase.co -Port 6543; \"6543=\" + $result.TcpTestSucceeded)",
+      "PowerShell(Resolve-DnsName db.eajateyhrufsggshxppq.supabase.co)",
+      "PowerShell(nslookup db.eajateyhrufsggshxppq.supabase.co)",
+      "Bash(grep -E \"\\\\.\\(js|sql|ts\\)$\")"
+    ]
+  }
+}

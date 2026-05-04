@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PreparIA — Ciencias Sociales</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <style>
+    .legend-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 3px;
+      flex-shrink: 0;
+    }
+
+    .search-nodes {
+      background: var(--ink-muted);
+      border: 2px solid rgba(245, 245, 240, 0.2);
+      border-radius: var(--radius-md);
+      padding: 12px 16px;
+      font-family: var(--font);
+      font-size: 0.9rem;
+      color: var(--white);
+      width: 100%;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .search-nodes:focus {
+      border-color: var(--acid);
+    }
+
+    .search-nodes::placeholder {
+      color: rgba(245, 245, 240, 0.3);
+    }
+
+    .icon-grid {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 8px;
+    }
+
+    .icon-btn {
+      background: var(--ink-muted);
+      border: 2px solid rgba(245, 245, 240, 0.15);
+      border-radius: var(--radius-sm);
+      width: 44px;
+      height: 44px;
+      font-size: 1.2rem;
+      cursor: pointer;
+      transition: all 0.15s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .icon-btn:hover,
+    .icon-btn.selected {
+      border-color: var(--acid);
+      background: var(--acid-glow);
+    }
+
+    #new-node-label,
+    #new-node-icon-display {
+      background: var(--ink-muted);
+      border: 2px solid rgba(245, 245, 240, 0.2);
+      border-radius: var(--radius-md);
+      padding: 12px 16px;
+      font-family: var(--font);
+      font-size: 0.95rem;
+      color: var(--white);
+      width: 100%;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    #new-node-label:focus {
+      border-color: var(--acid);
+    }
+
+    .node-count-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--acid-glow);
+      color: var(--acid);
+      border: 1px solid var(--acid);
+      border-radius: 100px;
+      padding: 2px 10px;
+      font-size: 0.72rem;
+      font-weight: 800;
+    }
+
+    .highlight {
+      color: var(--acid);
+      background: rgba(191, 255, 0, 0.15);
+      border-radius: 3px;
+      padding: 0 2px;
+    }
+
+    /* ── Node Type Selector Dropdown ── */
+    #node-type-selector {
+      display: none;
+      position: fixed;
+      z-index: 9999;
+      background: #0d0d1a;
+      border: 2.5px solid var(--acid);
+      border-radius: var(--radius-md);
+      box-shadow: 4px 4px 0 var(--acid), 0 20px 60px rgba(0, 0, 0, 0.7);
+      padding: 10px;
+      min-width: 230px;
+      font-family: var(--font);
+    }
+
+    #node-type-selector.visible {
+      display: block !important;
+      animation: nts-in 0.16s ease forwards;
+    }
+
+    @keyframes nts-in {
+      from { opacity: 0; transform: translateY(6px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .nts-title {
+      font-size: 0.68rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.09em;
+      color: rgba(245, 245, 240, 0.38);
+      padding: 2px 6px 8px;
+      border-bottom: 1px solid rgba(245, 245, 240, 0.08);
+      margin-bottom: 6px;
+    }
+
+    .nts-btn {
+      display: flex;
+      align-items: center;
+      gap: 11px;
+      width: 100%;
+      background: transparent;
+      border: 2px solid transparent;
+      border-radius: var(--radius-sm);
+      padding: 10px 10px;
+      cursor: pointer;
+      font-family: var(--font);
+      color: var(--white);
+      text-align: left;
+      transition: background 0.13s, border-color 0.13s;
+    }
+
+    .nts-btn:hover {
+      background: var(--acid-glow);
+      border-color: var(--acid);
+    }
+
+    .nts-icon {
+      font-size: 1.35rem;
+      line-height: 1;
+      flex-shrink: 0;
+    }
+
+    .nts-text {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .nts-name {
+      font-size: 0.88rem;
+      font-weight: 700;
+      line-height: 1.2;
+    }
+
+    .nts-desc {
+      font-size: 0.7rem;
+      color: rgba(245, 245, 240, 0.42);
+      line-height: 1.3;
+    }
+
+    /* Selected node indicator */
+    .tree-node-header.node-selected {
+      border-left: 3px solid var(--acid);
+      padding-left: calc(12px - 3px);
+      background: rgba(191, 255, 0, 0.05);
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- ── NAVBAR ── -->
+  <nav class="navbar">
+    <div class="container">
+      <a href="index.html" class="nav-logo">Prepar<span>IA</span></a>
+      <div class="flex items-center gap-md">
+        <span style="font-size:0.85rem;color:rgba(245,245,240,0.5)">Hola, <strong data-user-name
+            style="color:var(--white)">Estudiante</strong></span>
+        <button id="logout-btn" class="btn btn-outline btn-sm">Salir</button>
+      </div>
+    </div>
+  </nav>
+
+  <div class="app-layout">
+    <!-- ── SIDEBAR ── -->
+    <aside class="sidebar">
+      <div class="sidebar-section">
+        <div class="sidebar-label">Principal</div>
+        <a href="dashboard.html" class="sidebar-item" data-nav="dashboard.html">
+          <span class="icon">🏠</span> Inicio
+        </a>
+      </div>
+      <div class="sidebar-section">
+        <div class="sidebar-label">Materias</div>
+        <a href="ciencias-sociales.html" class="sidebar-item active" data-nav="ciencias-sociales.html">
+          <span class="icon">🌍</span> Ciencias Sociales
+        </a>
+      </div>
+      <div class="sidebar-section">
+        <div class="sidebar-label">Práctica</div>
+        <a href="simulacros.html" class="sidebar-item" data-nav="simulacros.html">
+          <span class="icon">📝</span> Simulacros
+        </a>
+        <a href="estadisticas.html" class="sidebar-item" data-nav="estadisticas.html">
+          <span class="icon">📊</span> Estadísticas
+        </a>
+        <a href="ranking.html" class="sidebar-item" data-nav="ranking.html">
+          <span class="icon">🏆</span> Ranking
+        </a>
+      </div>
+    </aside>
+
+    <!-- ── MAIN CONTENT ── -->
+    <main class="main-content">
+      <div class="page-header">
+        <div class="breadcrumb">Inicio → Materias → <span>Ciencias Sociales</span></div>
+        <div class="flex justify-between items-center" style="flex-wrap:wrap;gap:16px">
+          <div>
+            <h2>🌍 Ciencias Sociales</h2>
+            <p class="mt-sm">Explora los temas del ICFES de forma visual e interactiva.</p>
+          </div>
+          <div class="flex gap-md flex-wrap">
+            <button onclick="PageCienciasSociales.expandAll()" class="btn btn-ghost btn-sm">Expandir todo</button>
+            <button onclick="PageCienciasSociales.collapseAll()" class="btn btn-outline btn-sm">Colapsar</button>
+            <button id="reset-tree-btn" class="btn btn-sm"
+              style="background:rgba(255,107,107,0.1);color:var(--coral);border-color:var(--coral)">↺ Reiniciar</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Search bar -->
+      <div class="mb-lg">
+        <input type="text" class="search-nodes" id="tree-search"
+          placeholder="🔍  Buscar tema en el árbol... (Ej: Simón Bolívar, PIB, Amazonia)">
+      </div>
+
+      <!-- Legend -->
+      <div class="flex gap-lg mb-lg" style="flex-wrap:wrap">
+        <div class="flex items-center gap-sm" style="font-size:0.8rem;font-weight:600">
+          <div class="legend-dot" style="background:var(--acid)"></div> Categoría principal
+        </div>
+        <div class="flex items-center gap-sm" style="font-size:0.8rem;font-weight:600">
+          <div class="legend-dot" style="background:rgba(245,245,240,0.3)"></div> Subtema
+        </div>
+        <div class="flex items-center gap-sm" style="font-size:0.8rem;font-weight:600">
+          <div class="legend-dot" style="background:var(--sky)"></div> Nodo personalizado
+        </div>
+      </div>
+
+      <!-- Tree -->
+      <div class="card no-hover" style="padding:20px">
+        <div id="tree-container" class="tree-container"></div>
+      </div>
+
+      <!-- Stats bar -->
+      <div class="grid-4 mt-lg">
+        <div class="stat-card green" style="padding:18px">
+          <div class="stat-label">Categorías</div>
+          <div class="stat-value accent" style="font-size:1.8rem" id="count-cats">4</div>
+        </div>
+        <div class="stat-card" style="padding:18px">
+          <div class="stat-label">Temas totales</div>
+          <div class="stat-value" style="font-size:1.8rem" id="count-total">—</div>
+        </div>
+        <div class="stat-card sky" style="padding:18px">
+          <div class="stat-label">Nodos personalizados</div>
+          <div class="stat-value" style="color:var(--sky);font-size:1.8rem" id="count-custom">0</div>
+        </div>
+        <div class="stat-card amber" id="add-node-card" style="padding:18px;cursor:pointer; display:none;"
+          onclick="PageCienciasSociales.showNodeTypeSelector()">
+          <div class="stat-label">Agregar nodo</div>
+          <div class="stat-value" style="color:var(--amber);font-size:1.8rem">+</div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Mobile Nav -->
+  <nav class="mobile-nav">
+    <a href="dashboard.html" class="mobile-nav-item"><span class="icon">🏠</span>Inicio</a>
+    <a href="ciencias-sociales.html" class="mobile-nav-item active"><span class="icon">🌍</span>Temas</a>
+    <a href="simulacros.html" class="mobile-nav-item"><span class="icon">📝</span>Simulacro</a>
+    <a href="ranking.html" class="mobile-nav-item"><span class="icon">🏆</span>Ranking</a>
+  </nav>
+
+  <!-- ── MODAL: Add Node ── -->
+  <div class="modal-overlay" id="add-node-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>➕ Agregar nodo</h3>
+        <button class="modal-close" data-close-modal="add-node-modal">✕</button>
+      </div>
+      <input type="hidden" id="new-node-parent">
+      <div class="flex flex-col gap-lg">
+        <div class="input-group">
+          <label>Nombre del tema</label>
+          <input type="text" id="new-node-label" placeholder="Ej: Revolución de los Comuneros" maxlength="60">
+        </div>
+        <div class="input-group" id="parent-category-group">
+          <label id="parent-category-label">Categoría principal</label>
+          <div class="icon-grid" id="parent-category-selector">
+            <!-- Emojis will be injected here dynamically -->
+          </div>
+        </div>
+        <div class="input-group">
+          <label>Contenido del tema</label>
+          <textarea id="new-node-content" placeholder="Escribe el contenido educativo aquí..." rows="4"
+            style="background: var(--ink-muted); border: 2px solid rgba(245,245,240,0.2); border-radius: var(--radius-md); padding: 12px 16px; font-family: var(--font); font-size: 0.95rem; color: var(--white); width: 100%; outline: none; transition: border-color 0.2s; resize: vertical;"></textarea>
+        </div>
+        <div class="flex gap-md">
+          <button class="btn btn-outline w-full" data-close-modal="add-node-modal">Cancelar</button>
+          <button id="save-node-btn" class="btn btn-primary w-full">Agregar ✓</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── MODAL: Node Content ── -->
+  <div class="modal-overlay" id="node-content-modal">
+    <div class="modal" style="max-width: 500px;">
+      <div class="modal-header">
+        <h3 id="node-content-title">📌 Título</h3>
+        <button class="modal-close" data-close-modal="node-content-modal">✕</button>
+      </div>
+      <div class="flex flex-col gap-lg" id="node-content-body"
+        style="font-size: 0.95rem; line-height: 1.6; color: rgba(245,245,240,0.85);">
+        <!-- Content will be injected here -->
+        Cargando...
+      </div>
+      <div class="mt-lg flex justify-end">
+        <button class="btn btn-primary btn-sm" data-close-modal="node-content-modal">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── NODE TYPE SELECTOR DROPDOWN ── -->
+  <div id="node-type-selector" role="menu" aria-label="Tipo de nodo">
+    <div class="nts-title">¿Tipo de nodo?</div>
+    <button class="nts-btn" onclick="PageCienciasSociales.handleNodeTypeChoice('padre')" role="menuitem">
+      <span class="nts-icon">🌳</span>
+      <div class="nts-text">
+        <span class="nts-name">Nodo padre</span>
+        <span class="nts-desc">Nivel raíz o superior al seleccionado</span>
+      </div>
+    </button>
+    <button class="nts-btn" onclick="PageCienciasSociales.handleNodeTypeChoice('hijo')" role="menuitem">
+      <span class="nts-icon">🌿</span>
+      <div class="nts-text">
+        <span class="nts-name">Nodo hijo</span>
+        <span class="nts-desc">Subtema del nodo seleccionado</span>
+      </div>
+    </button>
+  </div>
+
+  <script src="js/api.js?v=11"></script>
+  <script src="js/app.js?v=11"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      // Search functionality
+      const searchInput = document.getElementById('tree-search');
+      if (searchInput) {
+        searchInput.addEventListener('input', (e) => {
+          const query = e.target.value.trim().toLowerCase();
+          const headers = document.querySelectorAll('.tree-node-header');
+
+          if (!query) {
+            headers.forEach(h => {
+              h.closest('.tree-node')?.style.removeProperty('display');
+              const label = h.querySelector('.tree-node-label');
+              if (label) label.innerHTML = label.textContent;
+            });
+            return;
+          }
+
+          headers.forEach(h => {
+            const node = h.closest('.tree-node');
+            const label = h.querySelector('.tree-node-label');
+            if (!label || !node) return;
+            const text = label.textContent.toLowerCase();
+            const match = text.includes(query);
+            node.style.display = match ? '' : 'none';
+            if (match) {
+              // Expand parent
+              let parent = node.parentElement;
+              while (parent) {
+                if (parent.classList.contains('tree-node-children')) {
+                  parent.classList.add('open');
+                  parent.previousElementSibling?.classList.add('open');
+                }
+                parent = parent.parentElement;
+              }
+              // Highlight
+              const orig = label.textContent;
+              const idx = orig.toLowerCase().indexOf(query);
+              label.innerHTML = orig.slice(0, idx) +
+                `<span class="highlight">${orig.slice(idx, idx + query.length)}</span>` +
+                orig.slice(idx + query.length);
+            }
+          });
+        });
+      }
+
+      // Count nodes
+      setTimeout(() => {
+        const total = document.querySelectorAll('.tree-node-header').length;
+        const custom = document.querySelectorAll('.badge-sky').length;
+        const totalEl = document.getElementById('count-total');
+        const customEl = document.getElementById('count-custom');
+        if (totalEl) totalEl.textContent = total;
+        if (customEl) customEl.textContent = custom;
+      }, 200);
+    });
+  </script>
+</body>
+
+</html>

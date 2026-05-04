@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PreparIA — Simulacros</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="css/ranking.css">
+  <style>
+    .start-card {
+      max-width: 680px;
+      margin: 0 auto;
+      background: var(--ink-soft);
+      border: 2px solid var(--acid);
+      border-radius: var(--radius-xl);
+      padding: 48px;
+      box-shadow: var(--shadow-solid-lg), var(--shadow-clay);
+      text-align: center;
+    }
+    .start-icon {
+      font-size: 4rem; margin-bottom: 20px;
+      animation: float 3s ease-in-out infinite;
+    }
+    @keyframes float {
+      0%,100%{transform:translateY(0)}
+      50%{transform:translateY(-10px)}
+    }
+    .sim-info-grid {
+      display: grid; grid-template-columns: repeat(3,1fr); gap: 16px;
+      margin: 32px 0;
+    }
+    .sim-info-item {
+      background: var(--ink-muted);
+      border: 1px solid rgba(245,245,240,0.1);
+      border-radius: var(--radius-md);
+      padding: 16px;
+    }
+    .sim-info-item .val { font-size: 1.5rem; font-weight: 800; color: var(--acid); }
+    .sim-info-item .lbl { font-size: 0.75rem; color: rgba(245,245,240,0.45); font-weight: 600; margin-top: 4px; }
+    .quiz-header {
+      display: flex; align-items: center; justify-content: space-between;
+      background: var(--ink-soft); border: 2px solid rgba(245,245,240,0.1);
+      border-radius: var(--radius-xl); padding: 20px 28px;
+      margin-bottom: 24px; gap: 20px; flex-wrap: wrap;
+    }
+    .quiz-nav {
+      display: flex; align-items: center; gap: 12px;
+      margin-top: 20px;
+    }
+    .q-dots {
+      display: flex; gap: 6px; flex-wrap: wrap;
+    }
+    .q-dot {
+      width: 28px; height: 28px; border-radius: 50%;
+      border: 2px solid rgba(245,245,240,0.2);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.65rem; font-weight: 800; cursor: pointer;
+      transition: all 0.2s; color: rgba(245,245,240,0.4);
+    }
+    .q-dot.answered { background: var(--acid); border-color: var(--acid); color: var(--ink); }
+    .q-dot.current  { border-color: var(--acid); color: var(--acid); }
+    .result-section { max-width: 720px; margin: 0 auto; }
+    .result-header {
+      background: linear-gradient(135deg, var(--ink-soft), var(--ink-muted));
+      border: 2px solid var(--acid);
+      border-radius: var(--radius-xl);
+      padding: 40px;
+      text-align: center;
+      margin-bottom: 32px;
+      box-shadow: var(--shadow-solid-lg);
+    }
+    .hidden { display: none !important; }
+    .q-panel { max-width: 720px; margin: 0 auto; }
+    .question-context {
+      background: var(--ink-muted);
+      border-left: 4px solid var(--sky);
+      border-radius: var(--radius-md);
+      padding: 16px 20px;
+      margin-bottom: 20px;
+      font-size: 0.92rem;
+      line-height: 1.7;
+      color: rgba(245, 245, 240, 0.85);
+      white-space: pre-line;
+    }
+    .history-item {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 18px;
+      background: var(--ink-muted);
+      border-radius: var(--radius-md);
+      border: 1px solid rgba(245,245,240,0.08);
+    }
+    .confetti-emoji {
+      font-size: 3rem;
+      animation: bounce 0.5s ease infinite alternate;
+    }
+    @keyframes bounce { from{transform:scale(1)} to{transform:scale(1.2)} }
+  </style>
+</head>
+<body>
+
+<!-- ── NAVBAR ── -->
+<nav class="navbar">
+  <div class="container">
+    <a href="index.html" class="nav-logo">Prepar<span>IA</span></a>
+    <div class="flex items-center gap-md">
+      <span style="font-size:0.85rem;color:rgba(245,245,240,0.5)">Hola, <strong data-user-name style="color:var(--white)">Estudiante</strong></span>
+      <button id="logout-btn" class="btn btn-outline btn-sm">Salir</button>
+    </div>
+  </div>
+</nav>
+
+<div class="app-layout">
+  <!-- ── SIDEBAR ── -->
+  <aside class="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-label">Principal</div>
+      <a href="dashboard.html" class="sidebar-item" data-nav="dashboard.html"><span class="icon">🏠</span> Inicio</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">Materias</div>
+      <a href="ciencias-sociales.html" class="sidebar-item" data-nav="ciencias-sociales.html"><span class="icon">🌍</span> Ciencias Sociales</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">Práctica</div>
+      <a href="simulacros.html" class="sidebar-item active" data-nav="simulacros.html"><span class="icon">📝</span> Simulacros</a>
+      <a href="estadisticas.html" class="sidebar-item" data-nav="estadisticas.html"><span class="icon">📊</span> Estadísticas</a>
+      <a href="ranking.html" class="sidebar-item" data-nav="ranking.html"><span class="icon">🏆</span> Ranking</a>
+    </div>
+  </aside>
+
+  <!-- ── MAIN CONTENT ── -->
+  <main class="main-content">
+    <div class="page-header">
+      <div class="breadcrumb">Inicio → <span>Simulacros</span></div>
+      <h2>📝 Simulacros ICFES</h2>
+      <p>Practica con preguntas de selección múltiple tipo examen de Estado.</p>
+    </div>
+
+    <!-- START SCREEN -->
+    <div id="simulacro-start">
+      <div class="start-card fade-in-up">
+        <div class="start-icon">📋</div>
+        <h2>¿Listo para el <span class="accent">simulacro</span>?</h2>
+        <p class="mt-sm">Responde 10 preguntas de Ciencias Sociales con el formato oficial del ICFES. Revisa tus respuestas antes de entregar.</p>
+
+        <div class="sim-info-grid">
+          <div class="sim-info-item">
+            <div class="val">10</div>
+            <div class="lbl">Preguntas</div>
+          </div>
+          <div class="sim-info-item">
+            <div class="val">20 min</div>
+            <div class="lbl">Tiempo límite</div>
+          </div>
+          <div class="sim-info-item">
+            <div class="val">4</div>
+            <div class="lbl">Opciones por pregunta</div>
+          </div>
+        </div>
+
+        <button id="ai-generate-btn" class="btn btn-primary btn-lg w-full mt-sm fade-in-up" style="background: linear-gradient(135deg, #8E24AA, #E040FB); border-color: transparent; color: white" onclick="PageSimulacros.generateIAFast()">
+          ✨ Generar simulacro con IA
+        </button>
+      </div>
+
+      <!-- History -->
+      <div class="mt-xl" style="max-width:680px;margin:40px auto 0">
+        <h4 class="mb-md">🕐 Últimos simulacros</h4>
+        <div id="history-list" class="flex flex-col gap-sm"></div>
+        <div class="text-center mt-md">
+          <a href="estadisticas.html" class="btn btn-ghost btn-sm">Ver estadísticas completas →</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- QUIZ SCREEN -->
+    <div id="simulacro-quiz" class="hidden q-panel">
+
+      <!-- Header with timer and progress -->
+      <div class="quiz-header">
+        <div>
+          <div class="muted" style="font-size:0.75rem;font-weight:800;text-transform:uppercase;letter-spacing:0.08em">Progreso</div>
+          <div style="font-size:1.1rem;font-weight:800" id="q-progress">1 / 10</div>
+        </div>
+        <div style="flex:1;max-width:300px">
+          <div class="progress-bar" style="height:8px">
+            <div class="progress-fill" id="q-progress-bar" style="width:10%"></div>
+          </div>
+        </div>
+        <div style="text-align:center">
+          <div class="muted" style="font-size:0.7rem;font-weight:800;text-transform:uppercase;letter-spacing:0.08em">⏱ Tiempo</div>
+          <div class="timer-display" id="timer">20:00</div>
+        </div>
+      </div>
+
+      <!-- Question dots -->
+      <div class="q-dots mb-md" id="q-dots"></div>
+
+      <!-- Question -->
+      <div id="question-container"></div>
+
+      <!-- Navigation -->
+      <div class="quiz-nav mt-lg">
+        <button id="btn-prev" class="btn btn-outline" onclick="PageSimulacros.prevQuestion()">← Anterior</button>
+        <button id="btn-next" class="btn btn-primary" style="margin-left:auto" onclick="PageSimulacros.nextQuestion()">Siguiente →</button>
+      </div>
+    </div>
+
+    <!-- RESULT SCREEN -->
+    <div id="simulacro-result" class="hidden result-section fade-in-up">
+      <div class="result-header">
+        <div class="confetti-emoji" id="result-emoji">🎉</div>
+        <h2 class="mt-md">Simulacro <span class="accent">completado</span></h2>
+        <div class="flex justify-center mt-lg">
+          <div id="result-score-ring"></div>
+        </div>
+        <div id="result-score-text" class="mt-md"></div>
+        <div class="flex justify-center gap-md mt-lg flex-wrap">
+          <button onclick="PageSimulacros.retake()" class="btn btn-primary">🔄 Nuevo simulacro</button>
+          <a href="estadisticas.html" class="btn btn-ghost">📊 Ver estadísticas</a>
+        </div>
+      </div>
+
+      <h3 class="mb-md">📋 Revisión de respuestas</h3>
+      <div id="review-container"></div>
+    </div>
+
+    <!-- IA GENERATION MODAL -->
+    <div class="modal-overlay" id="ia-modal">
+      <div class="modal">
+        <div class="modal-header">
+          <h3>✨ Generar con Gemini AI</h3>
+          <button class="modal-close" data-close-modal="ia-modal">✕</button>
+        </div>
+        <div id="ia-form">
+          <div class="input-group">
+            <label>Materia</label>
+            <select id="ia-materia"></select>
+          </div>
+          <div class="flex gap-md">
+            <div class="input-group w-full">
+              <label>Dificultad</label>
+              <select id="ia-dificultad">
+                <option value="mixta">Mixta (recomendada)</option>
+                <option value="facil">Fácil</option>
+                <option value="media">Media</option>
+                <option value="dificil">Difícil</option>
+              </select>
+            </div>
+            <div class="input-group w-full">
+              <label>Número de preguntas</label>
+              <input type="number" id="ia-cantidad" value="10" min="5" max="20">
+            </div>
+          </div>
+          <div class="input-group">
+            <label>Contexto adicional (opcional)</label>
+            <textarea id="ia-contexto" rows="2" placeholder="Ej: enfocarse en la Constitución de 1991..."></textarea>
+          </div>
+          <div class="flex gap-md mt-md">
+            <button class="btn btn-outline w-full" data-close-modal="ia-modal">Cancelar</button>
+            <button class="btn btn-primary w-full" id="ia-submit-btn" style="background:#8E24AA;border-color:#E040FB;color:white" onclick="PageSimulacros.generateIA()">Generar ✨</button>
+          </div>
+        </div>
+        <div id="ia-loading" class="hidden text-center py-xl">
+          <div style="font-size:3rem;animation:bounce 1s infinite alternate">🤖</div>
+          <h4 class="mt-md accent">Gemini está trabajando...</h4>
+          <p class="muted" style="font-size:0.85rem">Generando preguntas y validando opciones.<br>Esto puede tardar unos 10-20 segundos.</p>
+          <div class="progress-bar mt-md w-full" style="height:6px;overflow:hidden">
+            <div class="progress-fill" style="width:100%; animation: pulse 1s infinite alternate; background:#E040FB"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- Toast container (points-toast.js mounts here) -->
+<div id="toast-container" class="toast-container"></div>
+<div id="confetti-container" class="confetti-container" aria-hidden="true"></div>
+
+<!-- Mobile Nav -->
+<nav class="mobile-nav">
+  <a href="dashboard.html" class="mobile-nav-item"><span class="icon">🏠</span>Inicio</a>
+  <a href="ciencias-sociales.html" class="mobile-nav-item"><span class="icon">🌍</span>Temas</a>
+  <a href="simulacros.html" class="mobile-nav-item active"><span class="icon">📝</span>Simulacro</a>
+  <a href="ranking.html" class="mobile-nav-item"><span class="icon">🏆</span>Ranking</a>
+</nav>
+
+<script src="js/api.js"></script>
+<script src="js/points-toast.js"></script>
+<script src="js/app.js"></script>
+<script>
+// Extend PageSimulacros with dot navigation
+const _origRender = PageSimulacros.renderQuestion.bind(PageSimulacros);
+PageSimulacros.renderQuestion = function() {
+  _origRender();
+  this.updateDots();
+};
+PageSimulacros.updateDots = function() {
+  const s = this.state;
+  const container = document.getElementById('q-dots');
+  if (!container || !s.questions.length) return;
+  container.innerHTML = s.questions.map((q, i) => `
+    <div class="q-dot ${s.answers[q.id] !== undefined ? 'answered' : ''} ${i === s.current ? 'current' : ''}"
+         onclick="PageSimulacros.jumpTo(${i})">${i + 1}</div>
+  `).join('');
+};
+PageSimulacros.jumpTo = function(index) {
+  this.state.current = index;
+  this.renderQuestion();
+};
+
+// Emoji based on score — override finishSimulacro to update emoji after async completion
+const _origFinish = PageSimulacros.finishSimulacro.bind(PageSimulacros);
+PageSimulacros.finishSimulacro = async function() {
+  await _origFinish();
+  setTimeout(() => {
+    const emoji = document.getElementById('result-emoji');
+    if (emoji) {
+      const pctEl = document.querySelector('.score-text');
+      const p = pctEl ? parseInt(pctEl.textContent) : 0;
+      emoji.textContent = p >= 80 ? '🏆' : p >= 60 ? '🌟' : '💪';
+    }
+  }, 100);
+};
+</script>
+</body>
+</html>

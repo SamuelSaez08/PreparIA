@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PreparIA — Estadísticas</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <style>
+    .chart-card {
+      background: var(--ink-soft);
+      border: 2px solid rgba(245,245,240,0.1);
+      border-radius: var(--radius-xl);
+      padding: 28px;
+    }
+    .chart-title {
+      font-size: 0.78rem; font-weight: 800;
+      text-transform: uppercase; letter-spacing: 0.1em;
+      color: rgba(245,245,240,0.4); margin-bottom: 20px;
+    }
+    canvas { display: block; }
+    .heatmap {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 4px;
+    }
+    .heat-cell {
+      aspect-ratio: 1;
+      border-radius: 3px;
+      background: rgba(245,245,240,0.07);
+      transition: background 0.2s;
+      cursor: default;
+      position: relative;
+    }
+    .heat-cell.level-1 { background: rgba(191,255,0,0.2); }
+    .heat-cell.level-2 { background: rgba(191,255,0,0.45); }
+    .heat-cell.level-3 { background: var(--acid); }
+    .heat-cell[title]:hover::after {
+      content: attr(title);
+      position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%);
+      background: var(--ink-soft); border: 1px solid rgba(245,245,240,0.2);
+      padding: 4px 8px; border-radius: 6px;
+      font-size: 0.7rem; white-space: nowrap; pointer-events: none;
+      z-index: 10; margin-bottom: 4px;
+    }
+    .table-wrapper { overflow-x: auto; }
+    .empty-state {
+      text-align: center; padding: 60px 20px;
+      color: rgba(245,245,240,0.25);
+    }
+    .empty-state .big { font-size: 3.5rem; margin-bottom: 12px; }
+    .doughnut-container { position: relative; width: 200px; height: 200px; margin: 0 auto; }
+    .topic-bar {
+      display: flex; align-items: center; gap: 12px;
+      padding: 10px 0;
+      border-bottom: 1px solid rgba(245,245,240,0.06);
+    }
+    .topic-bar:last-child { border-bottom: none; }
+    .topic-name { width: 160px; font-size: 0.85rem; font-weight: 600; flex-shrink: 0; }
+    .topic-track { flex: 1; height: 8px; background: rgba(245,245,240,0.1); border-radius: 100px; overflow: hidden; }
+    .topic-fill { height: 100%; border-radius: 100px; background: var(--acid); }
+    .topic-pct { width: 40px; text-align: right; font-size: 0.82rem; font-weight: 800; color: var(--acid); }
+  </style>
+</head>
+<body>
+
+<!-- ── NAVBAR ── -->
+<nav class="navbar">
+  <div class="container">
+    <a href="index.html" class="nav-logo">Prepar<span>IA</span></a>
+    <div class="flex items-center gap-md">
+      <span style="font-size:0.85rem;color:rgba(245,245,240,0.5)">Hola, <strong data-user-name style="color:var(--white)">Estudiante</strong></span>
+      <button id="logout-btn" class="btn btn-outline btn-sm">Salir</button>
+    </div>
+  </div>
+</nav>
+
+<div class="app-layout">
+  <!-- ── SIDEBAR ── -->
+  <aside class="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-label">Principal</div>
+      <a href="dashboard.html" class="sidebar-item" data-nav="dashboard.html"><span class="icon">🏠</span> Inicio</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">Materias</div>
+      <a href="ciencias-sociales.html" class="sidebar-item" data-nav="ciencias-sociales.html"><span class="icon">🌍</span> Ciencias Sociales</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">Práctica</div>
+      <a href="simulacros.html" class="sidebar-item" data-nav="simulacros.html"><span class="icon">📝</span> Simulacros</a>
+      <a href="estadisticas.html" class="sidebar-item active" data-nav="estadisticas.html"><span class="icon">📊</span> Estadísticas</a>
+      <a href="ranking.html" class="sidebar-item" data-nav="ranking.html"><span class="icon">🏆</span> Ranking</a>
+    </div>
+  </aside>
+
+  <!-- ── MAIN CONTENT ── -->
+  <main class="main-content">
+    <div class="page-header">
+      <div class="breadcrumb">Inicio → <span>Estadísticas</span></div>
+      <div class="flex justify-between items-center" style="flex-wrap:wrap;gap:16px">
+        <div>
+          <h2>📊 Mis estadísticas</h2>
+          <p>Analiza tu progreso y descubre dónde mejorar.</p>
+        </div>
+        <button onclick="if(confirm('¿Borrar todo el historial de simulacros?')){localStorage.removeItem('preparia_simulacros');location.reload()}"
+          class="btn btn-sm" style="background:rgba(255,107,107,0.1);color:var(--coral);border-color:var(--coral)">
+          🗑️ Borrar historial
+        </button>
+      </div>
+    </div>
+
+    <!-- Summary stats -->
+    <div class="grid-4 mb-lg">
+      <div class="stat-card green">
+        <div class="stat-label">Simulacros realizados</div>
+        <div class="stat-value accent" id="stats-total">0</div>
+        <div class="stat-badge up">📝 Total</div>
+      </div>
+      <div class="stat-card coral">
+        <div class="stat-label">Puntaje promedio</div>
+        <div class="stat-value" style="color:var(--coral)" id="stats-promedio">—</div>
+        <div class="stat-badge" style="background:rgba(255,107,107,0.1);color:var(--coral)">📈 Acum.</div>
+      </div>
+      <div class="stat-card sky">
+        <div class="stat-label">Mejor puntaje</div>
+        <div class="stat-value" style="color:var(--sky)" id="stats-mejor">—</div>
+        <div class="stat-badge" style="background:rgba(78,205,196,0.1);color:var(--sky)">🏆 Récord</div>
+      </div>
+      <div class="stat-card amber">
+        <div class="stat-label">Racha más larga</div>
+        <div class="stat-value" style="color:var(--amber)" id="stats-racha">0</div>
+        <div class="stat-badge" style="background:rgba(255,217,61,0.1);color:var(--amber)">🔥 días</div>
+      </div>
+    </div>
+
+    <!-- Charts row -->
+    <div class="grid-2 mb-lg">
+      <!-- Bar chart -->
+      <div class="chart-card">
+        <div class="chart-title">📈 Evolución de puntajes</div>
+        <div id="chart-empty" class="empty-state" style="padding:30px 0">
+          <div class="big">📊</div>
+          <p>Completa simulacros para ver tu evolución</p>
+        </div>
+        <div id="chart-wrapper" style="display:none">
+          <canvas id="chart-scores" style="height:200px;width:100%"></canvas>
+        </div>
+      </div>
+
+      <!-- Score ring + info -->
+      <div class="chart-card">
+        <div class="chart-title">🎯 Puntaje promedio global</div>
+        <div class="flex items-center gap-xl">
+          <div id="avg-score-ring"></div>
+          <div class="flex flex-col gap-md" style="flex:1">
+            <div>
+              <div class="muted" style="font-size:0.75rem">Nivel actual</div>
+              <div style="font-weight:700" id="level-label">—</div>
+            </div>
+            <div>
+              <div class="muted" style="font-size:0.75rem">Meta recomendada</div>
+              <div style="font-weight:700;color:var(--acid)">70% o más</div>
+            </div>
+            <div>
+              <div class="muted" style="font-size:0.75rem">¿Qué mejorar?</div>
+              <div style="font-weight:600;font-size:0.88rem" id="improve-tip">Completa más simulacros</div>
+            </div>
+          </div>
+        </div>
+        <!-- Mini progress by topic -->
+        <div class="divider"></div>
+        <div class="chart-title">Rendimiento por tema</div>
+        <div id="topic-bars">
+          <div class="topic-bar"><div class="topic-name">Historia Col.</div><div class="topic-track"><div class="topic-fill" style="width:72%"></div></div><div class="topic-pct">72%</div></div>
+          <div class="topic-bar"><div class="topic-name">Geografía</div><div class="topic-track"><div class="topic-fill" style="width:58%;background:var(--sky)"></div></div><div class="topic-pct" style="color:var(--sky)">58%</div></div>
+          <div class="topic-bar"><div class="topic-name">Política</div><div class="topic-track"><div class="topic-fill" style="width:45%;background:var(--amber)"></div></div><div class="topic-pct" style="color:var(--amber)">45%</div></div>
+          <div class="topic-bar"><div class="topic-name">Economía</div><div class="topic-track"><div class="topic-fill" style="width:38%;background:var(--coral)"></div></div><div class="topic-pct" style="color:var(--coral)">38%</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Activity heatmap -->
+    <div class="chart-card mb-lg">
+      <div class="chart-title">🗓️ Actividad — últimas 4 semanas</div>
+      <div class="flex items-center gap-md mb-md" style="font-size:0.75rem;color:rgba(245,245,240,0.4)">
+        <span>Menos</span>
+        <div style="display:flex;gap:4px">
+          <div style="width:14px;height:14px;border-radius:3px;background:rgba(245,245,240,0.07)"></div>
+          <div style="width:14px;height:14px;border-radius:3px;background:rgba(191,255,0,0.2)"></div>
+          <div style="width:14px;height:14px;border-radius:3px;background:rgba(191,255,0,0.45)"></div>
+          <div style="width:14px;height:14px;border-radius:3px;background:var(--acid)"></div>
+        </div>
+        <span>Más actividad</span>
+      </div>
+      <div class="heatmap" id="heatmap" style="max-width:340px"></div>
+    </div>
+
+    <!-- History table -->
+    <div class="chart-card">
+      <div class="flex justify-between items-center mb-md">
+        <div class="chart-title" style="margin-bottom:0">📋 Historial de simulacros</div>
+        <a href="simulacros.html" class="btn btn-primary btn-sm">+ Nuevo simulacro</a>
+      </div>
+      <div class="table-wrapper">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Fecha</th>
+              <th>Resultado</th>
+              <th>Puntaje</th>
+              <th>Nivel</th>
+            </tr>
+          </thead>
+          <tbody id="stats-tbody">
+            <tr>
+              <td colspan="5" style="text-align:center;color:rgba(245,245,240,0.3);padding:40px">
+                Aún no hay simulacros registrados. <a href="simulacros.html" style="color:var(--acid)">¡Empieza ahora!</a>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- Mobile Nav -->
+<nav class="mobile-nav">
+  <a href="dashboard.html" class="mobile-nav-item"><span class="icon">🏠</span>Inicio</a>
+  <a href="ciencias-sociales.html" class="mobile-nav-item"><span class="icon">🌍</span>Temas</a>
+  <a href="simulacros.html" class="mobile-nav-item"><span class="icon">📝</span>Simulacro</a>
+  <a href="ranking.html" class="mobile-nav-item"><span class="icon">🏆</span>Ranking</a>
+</nav>
+
+<script src="js/api.js"></script>
+<script src="js/app.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const history = Simulacros.getHistory();
+  const stats   = Simulacros.getStats();
+
+  // Show chart if data
+  if (history.length) {
+    document.getElementById('chart-empty').style.display = 'none';
+    document.getElementById('chart-wrapper').style.display = 'block';
+  }
+
+  // Level label
+  const levelEl = document.getElementById('level-label');
+  const tipEl   = document.getElementById('improve-tip');
+  if (levelEl) {
+    levelEl.textContent = Utils.scoreLabel(stats.avg);
+    levelEl.style.color = Utils.scoreColor(stats.avg);
+  }
+  if (tipEl && history.length) {
+    const tips = [
+      'Repasa Historia de Colombia',
+      'Practica preguntas de Geografía',
+      'Estudia la Constitución de 1991',
+      'Refuerza conceptos económicos',
+    ];
+    tipEl.textContent = tips[Math.floor(Math.random() * tips.length)];
+  }
+
+  // Heatmap
+  const heatmap = document.getElementById('heatmap');
+  if (heatmap) {
+    const streak = Streak.get();
+    const histDates = history.map(h => h.date);
+    for (let i = 27; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      const str = d.toISOString().split('T')[0];
+      const inHistory = (streak.history || []).includes(str);
+      const simCount  = history.filter(h => h.date.includes(d.getDate())).length;
+      let level = 0;
+      if (inHistory) level = simCount >= 2 ? 3 : simCount === 1 ? 2 : 1;
+      const cell = document.createElement('div');
+      cell.className = `heat-cell level-${level}`;
+      cell.title = `${str}: ${inHistory ? 'Activo' : 'Inactivo'}`;
+      heatmap.appendChild(cell);
+    }
+  }
+});
+</script>
+</body>
+</html>

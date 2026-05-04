@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PreparIA — Iniciar sesión</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <style>
+    .left-deco { position: absolute; inset: 0; z-index: 0; overflow: hidden; }
+    .left-deco .circle {
+      position: absolute;
+      border-radius: 50%;
+      background: var(--acid);
+      opacity: 0.06;
+    }
+    .brand-tagline {
+      position: relative;
+      z-index: 1;
+      margin-top: auto;
+    }
+    .brand-big {
+      font-size: clamp(3rem, 8vw, 5.5rem);
+      font-weight: 800;
+      letter-spacing: -0.06em;
+      line-height: 1;
+      margin-bottom: 16px;
+    }
+    .social-proof {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-top: 32px;
+    }
+    .avatars {
+      display: flex;
+    }
+    .avatars .av {
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      background: var(--acid);
+      border: 2px solid var(--ink-soft);
+      margin-left: -8px;
+      font-size: 0.7rem;
+      font-weight: 800;
+      color: var(--ink);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .avatars .av:first-child { margin-left: 0; }
+    .divider-or {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 24px 0;
+    }
+    .divider-or::before, .divider-or::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: rgba(245,245,240,0.1);
+    }
+    .divider-or span { font-size: 0.8rem; color: rgba(245,245,240,0.3); font-weight: 600; }
+    .pwd-wrapper { position: relative; }
+    .pwd-wrapper .input-field { padding-right: 50px; }
+    .pwd-toggle {
+      position: absolute;
+      right: 14px; top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 1rem;
+      padding: 4px;
+    }
+  </style>
+</head>
+<body>
+<div class="auth-layout">
+
+  <!-- LEFT PANEL -->
+  <div class="auth-panel left">
+    <div class="left-deco">
+      <div class="circle" style="width:400px;height:400px;top:-100px;left:-100px"></div>
+      <div class="circle" style="width:200px;height:200px;bottom:100px;right:-50px"></div>
+    </div>
+
+    <!-- Logo -->
+    <a href="index.html" class="nav-logo" style="position:relative;z-index:1">Prepar<span>IA</span></a>
+
+    <div class="brand-tagline">
+      <div class="brand-big">Estudia.<br><span class="accent">Practica.<br>Aprueba.</span></div>
+      <p>La plataforma que te lleva al puntaje que necesitas en el ICFES, con simulacros y análisis inteligentes.</p>
+      <div class="social-proof">
+        <div class="avatars">
+          <div class="av">S</div>
+          <div class="av" style="background:var(--sky)">C</div>
+          <div class="av" style="background:var(--coral)">V</div>
+          <div class="av" style="background:var(--amber);color:var(--ink)">M</div>
+        </div>
+        <div>
+          <div style="font-weight:700;font-size:0.85rem">+12,000 estudiantes</div>
+          <div class="muted">ya están mejorando su puntaje</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT PANEL -->
+  <div class="auth-panel right">
+    <div class="auth-form">
+      <a href="index.html" class="muted mb-lg" style="display:inline-flex;align-items:center;gap:6px;margin-bottom:32px">← Volver al inicio</a>
+
+      <h2>Bienvenido<br>de vuelta 👋</h2>
+      <p class="mt-sm" style="margin-bottom:36px">Ingresa tus datos para continuar tu preparación.</p>
+
+      <!-- Form -->
+      <form id="login-form" novalidate>
+        <div class="flex flex-col gap-lg">
+
+          <div class="input-group">
+            <label for="email">Correo electrónico</label>
+            <input type="email" id="email" class="input-field" placeholder="tu@correo.com" autocomplete="email">
+            <span class="input-error" id="email-error"></span>
+          </div>
+
+          <div class="input-group">
+            <label for="password">Contraseña</label>
+            <div class="pwd-wrapper">
+              <input type="password" id="password" class="input-field" placeholder="••••••••" autocomplete="current-password">
+              <button type="button" class="pwd-toggle" data-toggle-pwd="password">👁️</button>
+            </div>
+            <span class="input-error" id="password-error"></span>
+          </div>
+
+          <button type="submit" class="btn btn-primary w-full" style="margin-top:4px">
+            Iniciar sesión →
+          </button>
+        </div>
+      </form>
+
+      <div class="divider-or"><span>o prueba rápido</span></div>
+
+      <button id="demo-login" class="btn btn-ghost w-full">
+        ⚡ Entrar como estudiante demo
+      </button>
+
+      <p class="text-center mt-lg" style="font-size:0.9rem">
+        ¿No tienes cuenta?
+        <a href="registro.html" style="color:var(--acid);font-weight:700">Regístrate gratis →</a>
+      </p>
+    </div>
+  </div>
+
+</div>
+<script src="js/api.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

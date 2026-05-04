@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PreparIA — Domina el ICFES</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <style>
+    /* ── Index-specific ── */
+    .stat-strip {
+      display: flex; gap: 0;
+      background: var(--acid);
+      border: var(--border);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      box-shadow: var(--shadow-solid-lg);
+    }
+    .stat-strip-item {
+      flex: 1;
+      padding: 24px 20px;
+      text-align: center;
+      border-right: 2px solid rgba(10,10,26,0.2);
+    }
+    .stat-strip-item:last-child { border-right: none; }
+    .stat-strip-item .num { font-size: 2rem; font-weight: 800; color: var(--ink); line-height: 1; }
+    .stat-strip-item .lbl { font-size: 0.78rem; font-weight: 700; color: rgba(10,10,26,0.65); margin-top: 4px; }
+
+    .benefit-card {
+      padding: 32px;
+      background: var(--ink-soft);
+      border: 2px solid rgba(245,245,240,0.1);
+      border-radius: var(--radius-xl);
+      transition: all var(--transition);
+    }
+    .benefit-card:hover {
+      border-color: var(--acid);
+      transform: translateY(-4px);
+      box-shadow: var(--shadow-solid), var(--shadow-clay);
+    }
+
+    .testimonial {
+      background: var(--ink-soft);
+      border: 2px solid rgba(245,245,240,0.1);
+      border-radius: var(--radius-xl);
+      padding: 28px;
+      position: relative;
+    }
+    .testimonial::before {
+      content: '"';
+      position: absolute;
+      top: -10px; left: 20px;
+      font-size: 5rem;
+      color: var(--acid);
+      line-height: 1;
+      font-weight: 800;
+    }
+    .testimonial-author { display: flex; align-items: center; gap: 12px; margin-top: 20px; }
+    .avatar {
+      width: 42px; height: 42px;
+      border-radius: 50%;
+      background: var(--acid);
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 800; color: var(--ink); font-size: 1rem;
+      flex-shrink: 0;
+    }
+
+    .cta-section {
+      background: linear-gradient(135deg, var(--ink-soft), var(--ink-muted));
+      border: 2px solid var(--acid);
+      border-radius: var(--radius-xl);
+      padding: 64px 48px;
+      text-align: center;
+      box-shadow: var(--shadow-solid-lg), var(--shadow-glow);
+      position: relative;
+      overflow: hidden;
+    }
+    .cta-section::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at 50% 0%, rgba(191,255,0,0.1), transparent 60%);
+      pointer-events: none;
+    }
+
+    .footer {
+      border-top: 2px solid rgba(245,245,240,0.07);
+      padding: 40px 0;
+      margin-top: 80px;
+    }
+    .footer-grid {
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr;
+      gap: 48px;
+    }
+    .footer-links { display: flex; flex-direction: column; gap: 10px; }
+    .footer-links a { color: rgba(245,245,240,0.5); font-size: 0.9rem; transition: color 0.2s; }
+    .footer-links a:hover { color: var(--acid); }
+
+    .nav-logged-banner {
+      background: var(--acid-glow);
+      border: 2px solid var(--acid);
+      border-radius: var(--radius-md);
+      padding: 14px 20px;
+      display: none;
+      align-items: center;
+      gap: 12px;
+      font-weight: 700;
+      color: var(--acid);
+      margin-bottom: 32px;
+    }
+
+    @media (max-width: 768px) {
+      .footer-grid { grid-template-columns: 1fr; gap: 32px; }
+      .stat-strip { flex-direction: column; }
+      .stat-strip-item { border-right: none; border-bottom: 2px solid rgba(10,10,26,0.2); }
+      .stat-strip-item:last-child { border-bottom: none; }
+      .cta-section { padding: 40px 24px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── NAVBAR ── -->
+<nav class="navbar">
+  <div class="container">
+    <a href="index.html" class="nav-logo">Prepar<span>IA</span></a>
+    <ul class="nav-links">
+      <li><a href="#beneficios">Beneficios</a></li>
+      <li><a href="#como-funciona">Cómo funciona</a></li>
+      <li><a href="login.html" class="btn btn-outline btn-sm">Iniciar sesión</a></li>
+      <li><a href="registro.html" class="btn btn-primary btn-sm">Registrarse</a></li>
+    </ul>
+  </div>
+</nav>
+
+<!-- ── HERO ── -->
+<section class="hero">
+  <div class="hero-blob"></div>
+  <div class="container">
+
+    <div id="logged-in-banner" class="nav-logged-banner">
+      <span>🎓</span>
+      <span>Ya tienes sesión activa —</span>
+      <a href="dashboard.html" class="btn btn-ghost btn-sm">Ir a Inicio →</a>
+    </div>
+
+    <div class="hero-eyebrow">
+      <span>🏆</span> Especializado en ICFES Colombia
+    </div>
+    <h1 class="hero-title fade-in-up">
+      Domina el<br>
+      <span class="accent">ICFES</span> con IA
+    </h1>
+    <p class="hero-desc fade-in-up delay-1">
+      PreparIA es la plataforma inteligente diseñada para que los estudiantes colombianos
+      conquisten el examen de Estado. Practica, aprende y mejora con simulacros
+      tipo ICFES y estadísticas en tiempo real.
+    </p>
+    <div class="hero-ctas fade-in-up delay-2">
+      <a href="registro.html" class="btn btn-primary btn-lg">Empezar gratis →</a>
+      <a href="login.html" class="btn btn-outline btn-lg">Ya tengo cuenta</a>
+    </div>
+
+    <!-- Stats strip -->
+    <div class="stat-strip mt-xl fade-in-up delay-3">
+      <div class="stat-strip-item">
+        <div class="num">+12K</div>
+        <div class="lbl">Estudiantes activos</div>
+      </div>
+      <div class="stat-strip-item">
+        <div class="num">98%</div>
+        <div class="lbl">Mejoran su puntaje</div>
+      </div>
+      <div class="stat-strip-item">
+        <div class="num">5</div>
+        <div class="lbl">Áreas cubiertas</div>
+      </div>
+      <div class="stat-strip-item">
+        <div class="num">+500</div>
+        <div class="lbl">Preguntas en banco</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── BENEFICIOS ── -->
+<section class="mt-xl" id="beneficios">
+  <div class="container">
+    <div class="text-center mb-lg">
+      <div class="hero-eyebrow" style="display:inline-flex">📚 ¿Por qué PreparIA?</div>
+      <h2 class="mt-md">Todo lo que necesitas<br>para <span class="accent">brillar</span></h2>
+    </div>
+    <div class="grid-3">
+      <div class="benefit-card fade-in-up delay-1">
+        <div class="feature-icon">🧠</div>
+        <h4>Árbol de conocimiento</h4>
+        <p class="mt-sm">Navega por los temas de Ciencias Sociales de forma visual e interactiva. Expande conceptos, agrega notas y domina cada subtema.</p>
+      </div>
+      <div class="benefit-card fade-in-up delay-2">
+        <div class="feature-icon">⚡</div>
+        <h4>Simulacros tipo ICFES</h4>
+        <p class="mt-sm">Practica con preguntas de selección múltiple de formato oficial. Temporizador incluido para simular la presión real del examen.</p>
+      </div>
+      <div class="benefit-card fade-in-up delay-3">
+        <div class="feature-icon">📊</div>
+        <h4>Estadísticas detalladas</h4>
+        <p class="mt-sm">Visualiza tu progreso con gráficos de puntajes, historial de simulacros y análisis de tus áreas más débiles.</p>
+      </div>
+      <div class="benefit-card fade-in-up delay-1">
+        <div class="feature-icon">🔥</div>
+        <h4>Racha de estudio</h4>
+        <p class="mt-sm">Mantén tu motivación con un sistema de rachas diarias. Estudia cada día y ve crecer tu racha hasta alcanzar tus metas.</p>
+      </div>
+      <div class="benefit-card fade-in-up delay-2">
+        <div class="feature-icon">🎯</div>
+        <h4>Retroalimentación inmediata</h4>
+        <p class="mt-sm">Al finalizar cada simulacro, revisa qué preguntas respondiste mal y entiende por qué con explicaciones detalladas.</p>
+      </div>
+      <div class="benefit-card fade-in-up delay-3">
+        <div class="feature-icon">🚀</div>
+        <h4>Sin complicaciones</h4>
+        <p class="mt-sm">Interfaz rápida y limpia. Sin publicidad, sin distracciones. Solo tú y tu preparación para el ICFES.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── CÓMO FUNCIONA ── -->
+<section class="mt-xl" id="como-funciona">
+  <div class="container">
+    <div class="text-center mb-lg">
+      <div class="hero-eyebrow" style="display:inline-flex">🗺️ Paso a paso</div>
+      <h2 class="mt-md">Así de <span class="accent">simple</span></h2>
+    </div>
+    <div class="grid-3">
+      <div class="card text-center fade-in-up delay-1">
+        <div style="font-size:3rem;margin-bottom:16px">1️⃣</div>
+        <h4>Regístrate gratis</h4>
+        <p class="mt-sm">Crea tu cuenta en menos de 2 minutos. Solo necesitas tu nombre, correo y grado escolar.</p>
+      </div>
+      <div class="card text-center fade-in-up delay-2">
+        <div style="font-size:3rem;margin-bottom:16px">2️⃣</div>
+        <h4>Estudia los temas</h4>
+        <p class="mt-sm">Usa el árbol de conocimiento para repasar Historia, Geografía, Política y Economía.</p>
+      </div>
+      <div class="card text-center fade-in-up delay-3">
+        <div style="font-size:3rem;margin-bottom:16px">3️⃣</div>
+        <h4>Practica y mejora</h4>
+        <p class="mt-sm">Genera simulacros, analiza tus estadísticas y sube tu puntaje hasta alcanzar tu meta.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── TESTIMONIALES ── -->
+<section class="mt-xl">
+  <div class="container">
+    <h2 class="text-center mb-lg">Estudiantes que <span class="accent">ya triunfaron</span></h2>
+    <div class="grid-3">
+      <div class="testimonial fade-in-up delay-1">
+        <p style="padding-top:28px">Subí 40 puntos en Ciencias Sociales en solo un mes de práctica diaria con PreparIA. Los simulacros son muy parecidos al examen real.</p>
+        <div class="testimonial-author">
+          <div class="avatar">S</div>
+          <div>
+            <div style="font-weight:700;font-size:0.9rem">Sofía Martínez</div>
+            <div class="muted">Grado 11 — Bogotá</div>
+          </div>
+        </div>
+      </div>
+      <div class="testimonial fade-in-up delay-2">
+        <p style="padding-top:28px">El árbol de temas me ayudó a organizar todo lo que necesitaba estudiar. Ahora entiendo la historia de Colombia de forma estructurada.</p>
+        <div class="testimonial-author">
+          <div class="avatar" style="background:var(--sky);color:var(--ink)">C</div>
+          <div>
+            <div style="font-weight:700;font-size:0.9rem">Carlos Duarte</div>
+            <div class="muted">Grado 11 — Medellín</div>
+          </div>
+        </div>
+      </div>
+      <div class="testimonial fade-in-up delay-3">
+        <p style="padding-top:28px">La racha diaria me motivó a estudiar todos los días. Terminé con 32 días seguidos y un puntaje de 85 en el ICFES real. ¡Gracias!</p>
+        <div class="testimonial-author">
+          <div class="avatar" style="background:var(--coral);color:var(--white)">V</div>
+          <div>
+            <div style="font-weight:700;font-size:0.9rem">Valentina López</div>
+            <div class="muted">Grado 11 — Cali</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── CTA ── -->
+<section class="mt-xl">
+  <div class="container">
+    <div class="cta-section">
+      <div class="hero-eyebrow" style="display:inline-flex;margin-bottom:20px">🎓 ¿Listo para empezar?</div>
+      <h2>Tu mejor puntaje<br><span class="accent">te está esperando</span></h2>
+      <p class="mt-md" style="max-width:500px;margin:16px auto 36px">
+        Únete a miles de estudiantes colombianos que ya están mejorando su puntaje ICFES con PreparIA. Gratis, sin publicidad, sin excusas.
+      </p>
+      <div class="flex justify-center gap-lg flex-wrap">
+        <a href="registro.html" class="btn btn-primary btn-lg">Crear cuenta gratis →</a>
+        <a href="login.html" class="btn btn-outline btn-lg">Ya tengo cuenta</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── FOOTER ── -->
+<footer class="footer">
+  <div class="container">
+    <div class="footer-grid">
+      <div>
+        <div class="nav-logo mb-md">Prepar<span style="color:var(--acid)">IA</span></div>
+        <p style="max-width:320px;font-size:0.9rem">La plataforma de preparación ICFES para estudiantes colombianos. Practica, aprende y conquista el examen.</p>
+      </div>
+      <div>
+        <div style="font-weight:800;font-size:0.8rem;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:16px;color:var(--acid)">Plataforma</div>
+        <div class="footer-links">
+          <a href="dashboard.html">Inicio</a>
+          <a href="simulacros.html">Simulacros</a>
+          <a href="ciencias-sociales.html">Ciencias Sociales</a>
+          <a href="estadisticas.html">Estadísticas</a>
+        </div>
+      </div>
+      <div>
+        <div style="font-weight:800;font-size:0.8rem;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:16px;color:var(--acid)">Cuenta</div>
+        <div class="footer-links">
+          <a href="registro.html">Registrarse</a>
+          <a href="login.html">Iniciar sesión</a>
+        </div>
+      </div>
+    </div>
+    <div class="divider"></div>
+    <div class="flex justify-between items-center" style="flex-wrap:wrap;gap:16px">
+      <p style="font-size:0.82rem">© 2025 PreparIA. Hecho con 💚 para estudiantes colombianos.</p>
+      <div class="flex gap-md">
+        <span class="badge badge-acid">HTML5</span>
+        <span class="badge badge-outline">CSS3</span>
+        <span class="badge badge-outline">JS Vanilla</span>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<script src="js/api.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
