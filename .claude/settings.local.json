@@ -15,7 +15,11 @@
       "PowerShell($result = Test-NetConnection -ComputerName db.eajateyhrufsggshxppq.supabase.co -Port 6543; \"6543=\" + $result.TcpTestSucceeded)",
       "PowerShell(Resolve-DnsName db.eajateyhrufsggshxppq.supabase.co)",
       "PowerShell(nslookup db.eajateyhrufsggshxppq.supabase.co)",
-      "Bash(grep -E \"\\\\.\\(js|sql|ts\\)$\")"
+      "Bash(grep -E \"\\\\.\\(js|sql|ts\\)$\")",
+      "Bash(node --check \"c:\\\\Users\\\\samue\\\\OneDrive\\\\Escritorio\\\\IAprepar\\\\IAprepar\\\\Backend\\\\src\\\\services\\\\ia.service.js\")",
+      "Read(//mnt/c/Users/samue/OneDrive/Escritorio/IAprepar/IAprepar/**)",
+      "Bash(node --check \"c:\\\\Users\\\\samue\\\\OneDrive\\\\Escritorio\\\\IAprepar\\\\IAprepar\\\\Backend\\\\src\\\\controllers\\\\ia.controller.js\")",
+      "Bash(node --check \"c:\\\\Users\\\\samue\\\\OneDrive\\\\Escritorio\\\\IAprepar\\\\IAprepar\\\\Backend\\\\src\\\\config\\\\gemini.js\")"
     ]
   }
 }

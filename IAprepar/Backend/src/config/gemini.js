@@ -14,15 +14,24 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || 'dummy_key');
  * para generación de JSON y sin filtros de seguridad.
  */
 const getModel = () => {
+  const modelName = process.env.GEMINI_MODEL || 'gemini-1.5-flash';
+  const is25 = modelName.includes('gemini-2.5');
+
+  // gemini-2.5-x no acepta topK/topP y requiere thinkingConfig para deshabilitar thinking
+  const generationConfig = {
+    temperature: parseFloat(process.env.GEMINI_TEMPERATURE || '0.7'),
+    maxOutputTokens: parseInt(process.env.GEMINI_MAX_TOKENS || '8192', 10),
+    responseMimeType: 'application/json',
+    ...(is25
+      ? { thinkingConfig: { thinkingBudget: 0 } }
+      : { topP: 0.8, topK: 40 }),
+  };
+
+  logger.info(`[gemini] Modelo activo: ${modelName}`);
+
   return genAI.getGenerativeModel({
-    model: process.env.GEMINI_MODEL || 'gemini-1.5-flash',
-    generationConfig: {
-      temperature: parseFloat(process.env.GEMINI_TEMPERATURE || '0.7'),
-      topP: 0.8,
-      topK: 40,
-      maxOutputTokens: parseInt(process.env.GEMINI_MAX_TOKENS || '8192', 10),
-      responseMimeType: 'application/json',
-    },
+    model: modelName,
+    generationConfig,
     safetySettings: [
       {
         category: 'HARM_CATEGORY_HARASSMENT',

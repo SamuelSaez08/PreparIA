@@ -10,10 +10,14 @@ const RankingPage = (() => {
   // ── State ────────────────────────────────────────────────
   let currentPeriod   = 'all_time';
   let currentUser     = null;
-  let leaderboardData = [];
+  let leaderboardData = [];   // filas cargadas hasta ahora (sin el top-3)
+  let totalEntries    = 0;    // total de entradas en la vista (devuelto por el backend)
+  let currentOffset   = 0;
+  let _isLoadingMore  = false;
   let _pollTimer      = null;
   let _lastRefresh    = null;
-  const POLL_INTERVAL = 60_000; // 60 segundos
+  const PAGE_SIZE     = 50;
+  const POLL_INTERVAL = 60_000;
 
   // ── DOM refs ─────────────────────────────────────────────
   const $ = (id) => document.getElementById(id);
@@ -23,25 +27,22 @@ const RankingPage = (() => {
     if (typeof Auth !== 'undefined') Auth.requireAuth();
     currentUser = Session.getUser();
 
-    // Tab listeners
     document.querySelectorAll('.tab-btn').forEach(btn => {
       btn.addEventListener('click', () => switchPeriod(btn.dataset.period));
     });
 
-    // Hydrate username in navbar
     if (currentUser) {
       document.querySelectorAll('[data-user-name]').forEach(el => {
         el.textContent = currentUser.nombre || currentUser.email;
       });
     }
 
-    // Kick off both fetches in parallel
     fetchLeaderboard(currentPeriod);
     if (currentUser) fetchUserStats(currentUser.id_usuario || currentUser.id);
 
-    // Auto-refresh: pausa cuando el tab está oculto, reanuda al volver
     _startPolling();
     document.addEventListener('visibilitychange', _onVisibilityChange);
+    window.addEventListener('beforeunload', _stopPolling);
   }
 
   // ── Period switch ─────────────────────────────────────────
@@ -56,21 +57,28 @@ const RankingPage = (() => {
     fetchLeaderboard(period);
   }
 
-  // ── Fetch leaderboard ─────────────────────────────────────
+  // ── Fetch leaderboard (primera página) ───────────────────
   async function fetchLeaderboard(period) {
     showPodiumSkeleton();
     showTableSkeleton();
-    $('lb-error').style.display  = 'none';
-    $('lb-empty').style.display  = 'none';
+    $('lb-error').style.display = 'none';
+    $('lb-empty').style.display = 'none';
+
+    leaderboardData = [];
+    currentOffset   = 0;
+    totalEntries    = 0;
 
     try {
-      const res = await RankingAPI.getRanking(period);
-      leaderboardData = (res.datos && res.datos.ranking) ? res.datos.ranking : (res.datos || []);
-      
-      // Update my rank badge if user info is available
-      if (res.datos && res.datos.posicion_usuario) {
+      const res  = await RankingAPI.getRanking(period, PAGE_SIZE, 0);
+      const data = res.datos || {};
+
+      totalEntries    = data.total_entries || 0;
+      currentOffset   = PAGE_SIZE;
+      leaderboardData = data.ranking || [];
+
+      if (data.posicion_usuario) {
         const rb = $('rank-badge');
-        if (rb) rb.textContent = `#${res.datos.posicion_usuario.rank_position || '—'}`;
+        if (rb) rb.textContent = `#${data.posicion_usuario.rank_position || '—'}`;
       }
 
       if (!leaderboardData.length) {
@@ -81,25 +89,55 @@ const RankingPage = (() => {
       }
 
       renderPodium(leaderboardData.slice(0, 3));
-      renderTable(leaderboardData.slice(3), currentUser);
-
-      const total = $('total-label');
-      if (total) {
-        total.textContent = `${leaderboardData.length} estudiantes`;
-        total.style.display = '';
-      }
+      renderTable(leaderboardData.slice(3), currentUser, false);
+      _updateTotalLabel();
 
       _lastRefresh = new Date();
       _updateRefreshLabel();
 
-    } catch (err) {
+    } catch (_) {
       clearPodium();
       $('lb-table-container').innerHTML = '';
       $('lb-error').style.display = 'flex';
     }
   }
 
-  // ── Reload (for error retry button) ──────────────────────
+  // ── Cargar más ────────────────────────────────────────────
+  async function loadMore() {
+    if (_isLoadingMore) return;
+    if (currentOffset >= totalEntries) return;
+
+    _isLoadingMore = true;
+    const btn = $('lb-load-more');
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = 'Cargando…';
+    }
+
+    try {
+      const res  = await RankingAPI.getRanking(currentPeriod, PAGE_SIZE, currentOffset);
+      const data = res.datos || {};
+      const newRows = data.ranking || [];
+
+      currentOffset   += newRows.length;
+      totalEntries     = data.total_entries || totalEntries;
+      leaderboardData  = [...leaderboardData, ...newRows];
+
+      appendRows(newRows, leaderboardData.length - newRows.length + 1);
+      _updateLoadMoreBtn();
+      _updateTotalLabel();
+    } catch (_) {
+      UI.showToast('Error al cargar más entradas. Intenta de nuevo.', 'error');
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = 'Cargar más';
+      }
+    } finally {
+      _isLoadingMore = false;
+    }
+  }
+
+  // ── Reload ────────────────────────────────────────────────
   function reload() {
     fetchLeaderboard(currentPeriod);
   }
@@ -118,7 +156,6 @@ const RankingPage = (() => {
     if (document.hidden) {
       _stopPolling();
     } else {
-      // Refrescar inmediatamente al volver al tab y reactivar polling
       _silentRefresh();
       _startPolling();
     }
@@ -126,26 +163,28 @@ const RankingPage = (() => {
 
   async function _silentRefresh() {
     try {
-      const res = await RankingAPI.getRanking(currentPeriod);
-      leaderboardData = (res.datos && res.datos.ranking) ? res.datos.ranking : (res.datos || []);
+      // Refresco silencioso: sólo vuelve a pedir la primera página
+      const res  = await RankingAPI.getRanking(currentPeriod, PAGE_SIZE, 0);
+      const data = res.datos || {};
 
-      if (res.datos && res.datos.posicion_usuario) {
+      totalEntries    = data.total_entries || 0;
+      currentOffset   = PAGE_SIZE;
+      leaderboardData = data.ranking || [];
+
+      if (data.posicion_usuario) {
         const rb = $('rank-badge');
-        if (rb) rb.textContent = `#${res.datos.posicion_usuario.rank_position || '—'}`;
+        if (rb) rb.textContent = `#${data.posicion_usuario.rank_position || '—'}`;
       }
 
       if (leaderboardData.length) {
         renderPodium(leaderboardData.slice(0, 3));
-        renderTable(leaderboardData.slice(3), currentUser);
-        const total = $('total-label');
-        if (total) total.textContent = `${leaderboardData.length} estudiantes`;
+        renderTable(leaderboardData.slice(3), currentUser, false);
+        _updateTotalLabel();
       }
 
       _lastRefresh = new Date();
       _updateRefreshLabel();
-    } catch (_) {
-      // Silencioso: no mostrar error en auto-refresh, esperar el siguiente tick
-    }
+    } catch (_) { /* silencioso */ }
   }
 
   function _updateRefreshLabel() {
@@ -155,26 +194,38 @@ const RankingPage = (() => {
     el.textContent = segs < 5 ? 'Actualizado ahora' : `Actualizado hace ${segs}s`;
   }
 
-  // ── Fetch user stats (right panel) ───────────────────────
+  function _updateTotalLabel() {
+    const total = $('total-label');
+    if (total) {
+      total.textContent  = `${totalEntries} estudiantes`;
+      total.style.display = '';
+    }
+  }
+
+  function _updateLoadMoreBtn() {
+    const btn = $('lb-load-more');
+    if (!btn) return;
+    const hayMas = currentOffset < totalEntries;
+    btn.style.display = hayMas ? '' : 'none';
+    btn.disabled      = false;
+    btn.textContent   = 'Cargar más';
+  }
+
+  // ── Fetch user stats ──────────────────────────────────────
   async function fetchUserStats(userId) {
     if (!userId) return;
-
     try {
-      const res  = await RankingAPI.getUserStats(userId);
-      const data = res.datos || {};
+      const res   = await RankingAPI.getUserStats(userId);
+      const data  = res.datos || {};
       const stats = data.stats || {};
 
-      // Populate right panel
       const initials = (currentUser.nombre || currentUser.email || '?')[0].toUpperCase();
       $('rank-avatar').textContent = initials;
       $('rank-name').textContent   = currentUser.nombre || currentUser.email;
 
-      // Rank badge is updated from fetchLeaderboard instead, to ensure consistency
-
-      // Animate counters
-      animateCounter($('rs-points'), stats.total_points    || 0, 900);
-      animateCounter($('rs-streak'), stats.current_streak  || 0, 700);
-      animateCounter($('rs-sims'),   stats.total_simulations|| 0, 800);
+      animateCounter($('rs-points'), stats.total_points     || 0, 900);
+      animateCounter($('rs-streak'), stats.current_streak   || 0, 700);
+      animateCounter($('rs-sims'),   stats.total_simulations || 0, 800);
 
       const avgEl = $('rs-avg');
       if (avgEl) {
@@ -182,33 +233,27 @@ const RankingPage = (() => {
         setTimeout(() => { avgEl.textContent = avg.toFixed(1); }, 300);
       }
 
-      // Streak widget
       $('panel-streak-count').textContent = stats.current_streak || 0;
       initStreakWidget('streak-widget-container', {
-        current_streak: stats.current_streak || 0,
-        activity_dates: (data.historial_actividad_30d || []).map(d => d.activity_date),
+        current_streak:  stats.current_streak || 0,
+        activity_dates:  (data.historial_actividad_30d || []).map(d => d.activity_date),
       });
 
-      // Shields panel
       const shields = Array.isArray(data.escudos) ? data.escudos : [];
       if (shields.length > 0) {
-        $('shields-panel').style.display  = '';
-        $('shields-count').textContent    = `${shields.length} escudo${shields.length !== 1 ? 's' : ''} disponible${shields.length !== 1 ? 's' : ''}`;
+        $('shields-panel').style.display = '';
+        $('shields-count').textContent   =
+          `${shields.length} escudo${shields.length !== 1 ? 's' : ''} disponible${shields.length !== 1 ? 's' : ''}`;
       }
-
-    } catch (_) {
-      // Stats panel stays with placeholder dashes
-    }
+    } catch (_) { /* stats panel queda con guiones */ }
   }
 
   // ── Render Podium ─────────────────────────────────────────
   function renderPodium(top3) {
-    const positions = [2, 1, 3]; // visual order: silver · gold · bronze
+    const positions = [2, 1, 3];
     const medals    = ['🥈', '🥇', '🥉'];
     const labels    = ['silver', 'gold', 'bronze'];
-
-    // Order: slot index 0 → position 2 (silver), 1 → position 1 (gold), 2 → position 3 (bronze)
-    const orderMap = [1, 0, 2]; // visual column → top3 array index
+    const orderMap  = [1, 0, 2];
 
     const container = $('podium-container');
     container.innerHTML = '';
@@ -217,9 +262,8 @@ const RankingPage = (() => {
       const entry = top3[orderMap[colIdx]];
       if (!entry) return;
 
-      const isMe = currentUser && (entry.user_id === (currentUser.id_usuario || currentUser.id));
-
-      const slot = document.createElement('div');
+      const isMe     = currentUser && (entry.user_id === (currentUser.id_usuario || currentUser.id));
+      const slot     = document.createElement('div');
       slot.className = `podium-slot position-${pos}${isMe ? ' is-me' : ''}`;
 
       const initials = (entry.nombre || '?')[0].toUpperCase();
@@ -232,7 +276,6 @@ const RankingPage = (() => {
         <div class="podium-points">${formatPoints(pts)} pts</div>
         <div class="podium-stand">${medals[colIdx]}</div>
       `;
-
       container.appendChild(slot);
     });
   }
@@ -241,21 +284,66 @@ const RankingPage = (() => {
     $('podium-container').innerHTML = '';
   }
 
-  // ── Render Table ──────────────────────────────────────────
-  function renderTable(entries, user) {
+  // ── Render Table (reemplaza contenido completo) ───────────
+  function renderTable(entries, user, append = false) {
     const container = $('lb-table-container');
 
-    if (!entries.length) {
+    if (!entries.length && !append) {
       container.innerHTML = '';
       return;
     }
 
-    const myId = user ? (user.id_usuario || user.id) : null;
+    const myId  = user ? (user.id_usuario || user.id) : null;
+    const start = append ? leaderboardData.length - entries.length + 4 : 4;
 
-    const rows = entries.map((entry, idx) => {
-      const rank  = idx + 4;
-      const isMe  = myId && entry.user_id === myId;
-      const pts   = periodPoints(entry);
+    const rows = _buildRows(entries, myId, start);
+
+    container.innerHTML = `
+      <div class="lb-table">
+        <div class="lb-header">
+          <span>#</span>
+          <span>Estudiante</span>
+          <span>Racha</span>
+          <span>Puntos</span>
+        </div>
+        ${rows}
+      </div>
+      <div style="text-align:center;margin-top:20px">
+        <button
+          id="lb-load-more"
+          class="btn btn-outline btn-sm"
+          onclick="RankingPage.loadMore()"
+          style="${currentOffset >= totalEntries ? 'display:none' : ''}"
+        >Cargar más</button>
+      </div>
+    `;
+  }
+
+  // ── Append rows al final de la tabla existente ────────────
+  function appendRows(newEntries, startRank) {
+    const myId    = currentUser ? (currentUser.id_usuario || currentUser.id) : null;
+    const table   = $('lb-table-container')?.querySelector('.lb-table');
+    if (!table) return;
+
+    const fragment = document.createDocumentFragment();
+    const wrapper  = document.createElement('div');
+    wrapper.innerHTML = _buildRows(newEntries, myId, startRank);
+    while (wrapper.firstChild) fragment.appendChild(wrapper.firstChild);
+
+    // Insertar antes del botón "Cargar más"
+    const loadMoreWrap = $('lb-table-container')?.querySelector('div[style]');
+    if (loadMoreWrap) {
+      $('lb-table-container').insertBefore(fragment, loadMoreWrap);
+    } else {
+      table.appendChild(fragment);
+    }
+  }
+
+  function _buildRows(entries, myId, startRank) {
+    return entries.map((entry, idx) => {
+      const rank     = startRank + idx;
+      const isMe     = myId && entry.user_id === myId;
+      const pts      = periodPoints(entry);
       const initials = (entry.nombre || '?')[0].toUpperCase();
 
       return `
@@ -272,34 +360,18 @@ const RankingPage = (() => {
         </div>
       `;
     }).join('');
-
-    container.innerHTML = `
-      <div class="lb-table">
-        <div class="lb-header">
-          <span>#</span>
-          <span>Estudiante</span>
-          <span>Racha</span>
-          <span>Puntos</span>
-        </div>
-        ${rows}
-      </div>
-    `;
   }
 
   // ── Counter animation ─────────────────────────────────────
   function animateCounter(el, target, duration) {
     if (!el) return;
-    const start     = performance.now();
-    const startVal  = 0;
+    const start = performance.now();
 
     function step(now) {
-      const elapsed  = now - start;
-      const progress = Math.min(elapsed / duration, 1);
-      const eased    = easeOutExpo(progress);
-      el.textContent = Math.round(startVal + (target - startVal) * eased);
+      const progress = Math.min((now - start) / duration, 1);
+      el.textContent = Math.round(target * easeOutExpo(progress));
       if (progress < 1) requestAnimationFrame(step);
     }
-
     requestAnimationFrame(step);
   }
 
@@ -307,10 +379,9 @@ const RankingPage = (() => {
     return t === 1 ? 1 : 1 - Math.pow(2, -10 * t);
   }
 
-  // ── Skeleton helpers ──────────────────────────────────────
+  // ── Skeletons ─────────────────────────────────────────────
   function showPodiumSkeleton() {
-    const container = $('podium-container');
-    container.innerHTML = `
+    $('podium-container').innerHTML = `
       <div class="podium-slot position-2 skeleton-slot">
         <div class="podium-avatar skeleton"></div>
         <div class="skeleton" style="width:70px;height:13px;border-radius:4px;margin:6px auto 0"></div>
@@ -355,7 +426,7 @@ const RankingPage = (() => {
   }
 
   // ── Public API ────────────────────────────────────────────
-  return { init, reload, switchPeriod, fetchUserStats, _updateRefreshLabel };
+  return { init, reload, loadMore, switchPeriod, fetchUserStats, _updateRefreshLabel };
 
 })();
 

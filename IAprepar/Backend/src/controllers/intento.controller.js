@@ -16,8 +16,13 @@ const getHistorial = async (req, res, next) => {
 
     const total = rows.length ? parseInt(rows[0].total_count, 10) : 0;
 
-    // Remove the window-function column from each row before sending
-    const datos = rows.map(({ total_count, ...rest }) => rest);
+    // Remove the window-function column and normalize field names for the frontend
+    const datos = rows.map(({ total_count, puntaje_obtenido, iniciado_en, ...rest }) => ({
+      ...rest,
+      puntaje:    puntaje_obtenido,
+      porcentaje: puntaje_obtenido,
+      fecha:      iniciado_en,
+    }));
 
     return ok(res, 'Historial obtenido.', datos, {
       total,
@@ -58,7 +63,10 @@ const finalizarIntento = async (req, res, next) => {
     const idIntento = parseInt(req.params.id, 10);
     const idUsuario = req.user.id_usuario;
 
-    const result = await simulacroService.finalizarIntento(idIntento, idUsuario);
+    const tiempoUsado = req.body?.tiempo_usado;
+    const tiempoSegundos = Number.isFinite(Number(tiempoUsado)) ? Math.max(0, Math.round(Number(tiempoUsado))) : null;
+
+    const result = await simulacroService.finalizarIntento(idIntento, idUsuario, tiempoSegundos);
 
     // Procesar gamificación y puntos al finalizar el simulacro
     let gamificacion = null;
@@ -73,7 +81,7 @@ const finalizarIntento = async (req, res, next) => {
       logger.error('Error al procesar gamificación:', gamErr.message);
     }
 
-    return ok(res, 'Simulacro finalizado.', { ...result, gamificacion });
+    return ok(res, 'Simulacro finalizado.', { ...result, porcentaje: result.puntaje, gamificacion });
   } catch (err) {
     if (err.statusCode) return fail(res, err.message, err.statusCode);
     next(err);

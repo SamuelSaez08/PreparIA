@@ -7,9 +7,15 @@ const getProgreso = async (req, res, next) => {
   try {
     const idUsuario = req.user.id_usuario;
 
-    const { rows: statsRows }    = await progresoRepo.getStatsGlobales(idUsuario);
-    const { rows: materiaRows }  = await progresoRepo.getProgresoMaterias(idUsuario);
-    const { rows: actividadRows } = await progresoRepo.getActividad30d(idUsuario);
+    const [
+      { rows: statsRows },
+      { rows: materiaRows },
+      { rows: actividadRows },
+    ] = await Promise.all([
+      progresoRepo.getStatsGlobales(idUsuario),
+      progresoRepo.getProgresoMaterias(idUsuario),
+      progresoRepo.getActividad30d(idUsuario),
+    ]);
 
     const actividad_semanal = actividadRows.map(r => r.fecha.toISOString().split('T')[0]);
 

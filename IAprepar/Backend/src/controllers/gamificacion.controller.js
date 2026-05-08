@@ -8,7 +8,9 @@ const { ROLES } = require('../utils/constants');
 const getRanking = async (req, res, next) => {
   try {
     const period = req.query.period || 'all_time';
-    const result = await gamificacionService.getLeaderboard(period, req.user.id_usuario);
+    const limit  = req.query.limit  || 50;
+    const offset = req.query.offset || 0;
+    const result = await gamificacionService.getLeaderboard(period, req.user.id_usuario, limit, offset);
     return ok(res, 'Ranking obtenido.', result);
   } catch (err) {
     if (err.statusCode) return fail(res, err.message, err.statusCode);

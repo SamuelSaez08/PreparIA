@@ -1,0 +1,9 @@
+{
+  "name": "preparia-frontend",
+  "version": "1.0.0",
+  "description": "PreparIA — Frontend estático",
+  "scripts": {
+    "dev": "npx serve -p 5500 .",
+    "start": "npx serve -p 5500 ."
+  }
+}

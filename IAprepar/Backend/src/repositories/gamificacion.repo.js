@@ -4,8 +4,11 @@ const db = require('../config/db');
 const callCompleteSimulation = (idUsuario, idSimulacro, basePoints, isPerfect) =>
   db.query('SELECT fn_complete_simulation($1,$2,$3,$4) AS resultado', [idUsuario, idSimulacro, basePoints, isPerfect]);
 
-const getLeaderboard = (vista) =>
-  db.query(`SELECT * FROM ${vista}`);
+const getLeaderboard = (vista, limit, offset) =>
+  db.query(
+    `SELECT *, COUNT(*) OVER() AS total_entries FROM ${vista} LIMIT $1 OFFSET $2`,
+    [limit, offset]
+  );
 
 const getUserRank = (idUsuario, period) =>
   db.query('SELECT * FROM fn_get_user_rank($1,$2)', [idUsuario, period]);

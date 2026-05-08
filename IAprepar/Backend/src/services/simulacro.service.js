@@ -66,7 +66,7 @@ const responderPregunta = async (idIntento, idUsuario, idPregunta, idOpcion) => 
   return { id_pregunta: idPregunta, es_correcta: esCorrecta };
 };
 
-const finalizarIntento = async (idIntento, idUsuario) => {
+const finalizarIntento = async (idIntento, idUsuario, tiempoUsado = null) => {
   const intento = await _verificarIntento(idIntento, idUsuario);
 
   return await db.transaction(async (client) => {
@@ -87,7 +87,10 @@ const finalizarIntento = async (idIntento, idUsuario) => {
 
     const { rows: retroalimentacion } = await intentoRepo.getRetroalimentacion(client, idIntento);
 
-    logger.info(`Intento ${idIntento} finalizado: ${puntaje}% (${correctas}/${totalPreguntas})`);
+    logger.info(
+      `Intento ${idIntento} finalizado: ${puntaje}% (${correctas}/${totalPreguntas})` +
+      (tiempoUsado !== null ? ` tiempo_usado=${tiempoUsado}s` : '')
+    );
 
     return {
       intento:           intentoActualizado[0],

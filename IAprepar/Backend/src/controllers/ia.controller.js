@@ -67,6 +67,10 @@ const generarPreguntas = async (req, res, next) => {
       distribucion_temas = calcularDistribucion(DISTRIBUCION_CIENCIAS_SOCIALES, parseInt(cantidad, 10));
     }
 
+    if ((guardar === 'true' || guardar === true) && req.user.rol !== ROLES.ADMIN) {
+      return fail(res, 'Solo los administradores pueden guardar preguntas generadas', 403);
+    }
+
     const opciones = {
       materia:            nRows[0].materia,
       nodo:               nRows[0].nombre,
@@ -86,12 +90,6 @@ const generarPreguntas = async (req, res, next) => {
     };
 
     const preguntas = await iaService.generarPreguntas(opciones, contextData);
-
-    if (guardar === 'true' || guardar === true) {
-      if (req.user.rol !== ROLES.ADMIN) {
-        return fail(res, 'Solo los administradores pueden guardar preguntas generadas', 403);
-      }
-    }
 
     return ok(res, 'Preguntas generadas con IA', preguntas);
   } catch (err) {
@@ -121,6 +119,7 @@ const mejorarPregunta = async (req, res, next) => {
     const result = await iaService.mejorarPregunta(req.params.id, { id_usuario: req.user.id_usuario });
     return ok(res, 'Pregunta mejorada', result);
   } catch (err) {
+    if (err.statusCode) return fail(res, err.message, err.statusCode);
     next(err);
   }
 };
@@ -130,6 +129,7 @@ const generarExplicacion = async (req, res, next) => {
     const result = await iaService.generarExplicacion(req.params.id, { id_usuario: req.user.id_usuario });
     return ok(res, 'Explicación generada', result);
   } catch (err) {
+    if (err.statusCode) return fail(res, err.message, err.statusCode);
     next(err);
   }
 };

@@ -5,15 +5,31 @@ const { getModel } = require('../config/gemini');
 const logger = require('../utils/logger');
 
 /**
- * Normaliza y repara JSON cuando Gemini lo devuelve con bloques markdown ```json ... ```
+ * Normaliza y repara JSON cuando Gemini lo devuelve en distintos formatos:
+ *   1. JSON puro
+ *   2. JSON envuelto en bloques markdown ```json ... ```
+ *   3. JSON precedido o seguido de texto libre (extrae entre primer { y último })
  */
 const _parseGeminiResponse = (text) => {
+  // Caso 1: JSON puro
+  try { return JSON.parse(text); } catch (_) {}
+
+  // Caso 2: JSON envuelto en bloques markdown
   try {
-    return JSON.parse(text);
-  } catch (err) {
-    const cleaned = text.replace(/```json\s*/, '').replace(/```\s*$/, '').trim();
+    const cleaned = text.replace(/```json\s*/g, '').replace(/```\s*$/g, '').trim();
     return JSON.parse(cleaned);
-  }
+  } catch (_) {}
+
+  // Caso 3: JSON incrustado en texto libre
+  try {
+    const start = text.indexOf('{');
+    const end   = text.lastIndexOf('}');
+    if (start !== -1 && end !== -1 && end > start) {
+      return JSON.parse(text.slice(start, end + 1));
+    }
+  } catch (_) {}
+
+  throw new Error('No se pudo parsear la respuesta de Gemini como JSON válido');
 };
 
 /**
@@ -78,9 +94,9 @@ const _validarPregunta = (p) => {
   // Filtro: el enunciado no debe revelar la respuesta
   if (/la opci.n (a|b|c|d) es|la respuesta correcta es/i.test(p.enunciado)) return false;
 
-  // Validación opcional: nivel_dificultad acepta con o sin tilde (comprension/comprensión)
+  // Validación opcional: nivel_dificultad debe coincidir con los valores del PROMPT_SISTEMA
   if (p.nivel_dificultad != null) {
-    const nivelesValidos = ['comprension', 'analisis', 'aplicacion'];
+    const nivelesValidos = ['basico', 'medio', 'avanzado'];
     if (!nivelesValidos.includes(_sinTilde(p.nivel_dificultad))) return false;
   }
 
@@ -92,7 +108,7 @@ const _validarPregunta = (p) => {
   // Validación opcional: tipo_contexto debe ser uno de los valores definidos
   if (p.tipo_contexto != null) {
     const tiposValidos = ['noticia', 'situacion', 'definicion', 'caricatura', 'documento_oficial', 'estadistica', 'discurso'];
-    if (!tiposValidos.includes(p.tipo_contexto.toLowerCase())) return false;
+    if (!tiposValidos.includes(_sinTilde(p.tipo_contexto))) return false;
   }
 
   return true;
@@ -142,10 +158,44 @@ CARACTERÍSTICAS DEL TEXTO BASE:
 - Debe estar contextualizado en Colombia o con referencia latinoamericana o global cuando aplique
 - Longitud: mínimo 3 líneas, máximo 8 líneas
 
-ESTRUCTURA OBLIGATORIA DE CADA PREGUNTA:
+COMPETENCIAS ICFES Y DISTRIBUCIÓN OBLIGATORIA
+
+
+Cada pregunta debe estar asociada a exactamente una de estas competencias. La distribución sobre el total de preguntas solicitadas debe respetarse:
+
+  a. "pensamiento_social"            → 30% de las preguntas
+     Evalúa la capacidad de reconocer e interpretar fenómenos sociales, políticos y económicos en contextos concretos.
+
+  b. "interpretacion_perspectivas"   → 40% de las preguntas
+     Evalúa la capacidad de identificar, contrastar y analizar distintos puntos de vista, argumentos e intereses presentes en una situación.
+
+  c. "pensamiento_reflexivo"         → 30% de las preguntas
+     Evalúa la capacidad de establecer relaciones causales, consecuencias sistémicas y proponer soluciones fundamentadas.
+
+Redondea al entero más cercano cuando el porcentaje no sea exacto. Incluye el campo "competencia" en cada pregunta con el valor exacto entre comillas: "pensamiento_social", "interpretacion_perspectivas" o "pensamiento_reflexivo".
+
+
+NIVELES DE DIFICULTAD
+
+
+Distribución sobre el total de preguntas (salvo indicación contraria en la solicitud):
+  - "basico"    → 30%: el estudiante identifica información explícita en el texto_base
+  - "medio"     → 50%: el estudiante infiere, relaciona causas/efectos o interpreta el texto_base
+  - "avanzado"  → 20%: el estudiante usa conceptos del texto_base para resolver una situación nueva
+
+
+ESTRUCTURA OBLIGATORIA DE CADA PREGUNTA
+
+
 1. texto_base (3-8 líneas): presenta la situación, fragmento, definición o estadística
 2. enunciado: pregunta concreta basada exclusivamente en el texto_base
-3. opciones A, B, C, D: plausibles, sin opciones absurdas, dos cercanas para exigir análisis
+3. opciones A, B, C, D: plausibles, sin opciones absurdas, dos opciones cercanas para exigir análisis
+4. respuesta_correcta: "A", "B", "C" o "D"
+5. competencia: "pensamiento_social" | "interpretacion_perspectivas" | "pensamiento_reflexivo"
+6. nivel_dificultad: "basico" | "medio" | "avanzado"
+7. tipo_contexto: tipo del texto_base usado
+8. tema: tema específico de Ciencias Sociales evaluado
+9. explicacion: por qué la respuesta correcta es correcta y por qué cada distractor es incorrecto
 
 TIPOS DE PREGUNTA permitidos:
 - Análisis de argumentos: "De las siguientes afirmaciones, ¿cuál NO es correcta?"
@@ -154,18 +204,20 @@ TIPOS DE PREGUNTA permitidos:
 - Relación entre ideas: "¿Qué tipo de relación existe entre las propuestas del texto?"
 - Consecuencia lógica: "¿Qué consecuencia tendría la decisión descrita en el texto?"
 
-DISTRIBUCIÓN DE DIFICULTAD:
-- Comprensión (40%): el estudiante identifica información explícita en el texto_base
-- Análisis (40%): el estudiante infiere, relaciona causas y efectos, o interpreta el texto_base
-- Aplicación (20%): el estudiante usa conceptos del texto_base para resolver una situación nueva
 
-REGLAS DE VARIEDAD Y ESTILO:
-- Nunca repetir el mismo tipo_contexto en más de 2 preguntas consecutivas del mismo simulacro
+REGLAS DE VARIEDAD Y ESTILO
+
+
+- Nunca repetir el mismo tipo_contexto en más de 2 preguntas consecutivas
 - No usar el mismo personaje, institución o situación en más de una pregunta
-- Incluir diversidad regional colombiana (no solo Bogotá): incluir referencias a regiones, departamentos o ciudades variadas
-- Usar instituciones colombianas reales: Congreso, Corte Constitucional, Registraduría, DANE, etc.
+- Incluir diversidad regional colombiana: no solo Bogotá; incluir regiones, departamentos y ciudades variadas
+- Usar instituciones colombianas reales: Congreso, Corte Constitucional, Registraduría, DANE, Defensoría del Pueblo, etc.
+- Distribuir la competencia "interpretacion_perspectivas" en preguntas que presenten al menos dos voces o puntos de vista en el texto_base
 
-EJEMPLO DE PREGUNTA CORRECTA:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+EJEMPLO DE PREGUNTA CORRECTA
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
 {
   "texto_base": "El artículo 67 de la Constitución Política de Colombia de 1991 establece: 'La educación es un derecho de la persona y un servicio público que tiene una función social; con ella se busca el acceso al conocimiento, a la ciencia, a la técnica, y a los demás bienes y valores de la cultura.' Según el DANE, el gasto público en educación en Colombia ha representado entre el 4% y el 5% del PIB en la última década, cifra inferior al promedio de países de la OCDE (5.8%).",
   "enunciado": "De acuerdo con el texto anterior, la característica que mejor define la educación según la Constitución colombiana es que esta",
@@ -176,20 +228,36 @@ EJEMPLO DE PREGUNTA CORRECTA:
     {"letra": "D", "texto": "se limita a la transmisión de ciencia y técnica en instituciones privadas", "es_correcta": false}
   ],
   "respuesta_correcta": "B",
-  "tema": "Política y Constitución colombiana",
-  "nivel_dificultad": "comprensión",
+  "competencia": "pensamiento_social",
+  "nivel_dificultad": "basico",
   "tipo_contexto": "documento_oficial",
+  "tema": "Derecho a la educación y gasto público",
   "explicacion": "El artículo 67 define la educación como derecho y servicio público con función social orientado al acceso al conocimiento (B). La opción A contradice el carácter de derecho universal. La C reduce la educación a un indicador económico. La D excluye el rol del Estado y las instituciones públicas."
 }
 
-PROHIBIDO:
+PROHIBIDO
+
 - Generar preguntas sin texto_base
 - Preguntas que se responden por memorización sin leer el texto_base
 - Opciones claramente absurdas o fuera de contexto
 - Repetir el mismo tipo_contexto en más de 2 preguntas consecutivas
+- Usar términos distintos a "basico", "medio", "avanzado" para nivel_dificultad
+- Usar términos distintos a los tres valores exactos para el campo competencia
 
 RESPONDE ÚNICAMENTE con un JSON válido, sin texto adicional, sin bloques de código markdown.
 El JSON debe seguir EXACTAMENTE el schema especificado en cada solicitud.`;
+
+/**
+ * Convierte el nombre de la tabla `nivel` al valor de competencia usado en el JSON de Gemini.
+ */
+const _nivelToCompetencia = (nombre) => {
+  if (!nombre) return null;
+  const n = nombre.toLowerCase();
+  if (n.includes('pensamiento social'))                          return 'pensamiento_social';
+  if (n.includes('interpretaci') || n.includes('perspectivas')) return 'interpretacion_perspectivas';
+  if (n.includes('reflexivo')    || n.includes('sist'))         return 'pensamiento_reflexivo';
+  return null;
+};
 
 /**
  * Construye la sección de distribución de temas del prompt cuando se proporciona distribucion_temas.
@@ -227,7 +295,7 @@ No generes más ni menos preguntas de las indicadas por tema.`;
  */
 const generarPreguntas = async (opciones, contextData = {}) => {
   const {
-    materia, nodo, subtema, nivel, dificultad, cantidad, tipo,
+    materia, nodo, subtema, nivel, descripcion_nivel, dificultad, cantidad, tipo,
     contexto_adicional, distribucion_temas
   } = opciones;
   const { id_usuario, id_materia, id_nodo } = contextData;
@@ -238,15 +306,28 @@ const generarPreguntas = async (opciones, contextData = {}) => {
   // Construir sección de distribución de temas si se proporcionó
   const seccionDistribucion = _buildDistribucionTemas(distribucion_temas);
 
+  /**
+   * competenciaForzada: cuando el nombre del nivel coincide con una de las tres competencias ICFES,
+   * se activa el modo de competencia única. Esto anula la distribución 30/40/30 del PROMPT_SISTEMA
+   * y obliga a que el 100% de las preguntas pertenezcan a esa competencia.
+   * Se activa solo desde generarPreguntas (endpoint individual); generarSimulacroCompleto
+   * usa el nivel neutro "Mixto" para respetar la distribución estándar.
+   */
+  const competenciaForzada = _nivelToCompetencia(nivel);
+  if (competenciaForzada) {
+    logger.warn(`[ia.service] Modo competencia forzada activo: ${competenciaForzada}. Distribución 30/40/30 anulada.`);
+  }
+
   const promptUsuario = `Genera exactamente ${cantidad} pregunta(s) de selección múltiple para
 el examen ICFES colombiano (módulo Sociales y Ciudadanas) con estas especificaciones:
 
 Materia: ${materia}
 Tema principal: ${nodo}
 ${subtema ? 'Subtema específico: ' + subtema : ''}
-Nivel educativo: ${nivel} (grado 10-11)
+Competencia ICFES: ${nivel}${descripcion_nivel ? '\n' + descripcion_nivel : ''}
 Dificultad predominante: ${dificultad}
 ${contexto_adicional ? 'Contexto adicional: ' + contexto_adicional : ''}
+${competenciaForzada ? `COMPETENCIA OBLIGATORIA: El 100% de las preguntas debe tener competencia="${competenciaForzada}". No aplica la distribución porcentual del sistema de instrucciones.` : ''}
 ${seccionDistribucion}
 
 RECUERDA: Cada pregunta DEBE tener un texto_base de 3-8 líneas. Sin texto_base la pregunta es inválida.
@@ -265,8 +346,9 @@ Responde ÚNICAMENTE con este JSON exacto, sin texto adicional, sin markdown:
         { "letra": "D", "texto": "Cuarta opción plausible",  "es_correcta": false }
       ],
       "respuesta_correcta": "B",
+      "competencia": "pensamiento_social|interpretacion_perspectivas|pensamiento_reflexivo",
       "tema": "nombre_del_tema",
-      "nivel_dificultad": "comprensión|análisis|aplicación",
+      "nivel_dificultad": "basico|medio|avanzado",
       "tipo_contexto": "noticia|situacion|definicion|caricatura|documento_oficial|estadistica|discurso",
       "explicacion": "Explicación de por qué la respuesta correcta es correcta y por qué las otras no."
     }
@@ -318,8 +400,11 @@ Responde ÚNICAMENTE con este JSON exacto, sin texto adicional, sin markdown:
 
       return exitosas;
     } catch (err) {
-      logger.warn(`Intento ${attempts} fallido al generar con IA: ${err.message}`);
+      const detalle = err.errorDetails ? JSON.stringify(err.errorDetails) : (err.status || err.statusText || '');
+      logger.warn(`Intento ${attempts} fallido al generar con IA: ${err.message} ${detalle}`.trim());
       lastError = err;
+      // No reintentar en errores que no se resuelven reintentando inmediatamente
+      if (err.message && /400|429|404|401|403|503/.test(err.message)) break;
     }
   }
 
@@ -334,6 +419,38 @@ Responde ÚNICAMENTE con este JSON exacto, sin texto adicional, sin markdown:
   const customError = new Error(`Fallo tras 3 intentos. Último error: ${lastError.message}`);
   customError.statusCode = 502;
   throw customError;
+};
+
+/**
+ * Verifica que la distribución de competencias en el array de preguntas
+ * respete aproximadamente la proporción 30/40/30 del ICFES Saber 11.
+ * Emite un logger.warn por cada competencia que se desvíe más de 1 pregunta.
+ */
+const _validarDistribucionCompetencias = (preguntas, cantidadTotal) => {
+  const esperado = {
+    pensamiento_social:          Math.round(cantidadTotal * 0.30),
+    interpretacion_perspectivas: Math.round(cantidadTotal * 0.40),
+    pensamiento_reflexivo:       Math.round(cantidadTotal * 0.30),
+  };
+  const conteo = { pensamiento_social: 0, interpretacion_perspectivas: 0, pensamiento_reflexivo: 0 };
+  for (const p of preguntas) {
+    if (p.competencia in conteo) conteo[p.competencia]++;
+  }
+  for (const [comp, esperadoVal] of Object.entries(esperado)) {
+    if (Math.abs(conteo[comp] - esperadoVal) > 1) {
+      logger.warn(
+        `[ia.service] Distribución de competencias desviada: ${comp} — esperado ${esperadoVal}, real ${conteo[comp]} (total: ${cantidadTotal})`
+      );
+    }
+  }
+};
+
+const _shuffle = (arr) => {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
 };
 
 const _getDificultadStats = (cantidad, mezclar) => {
@@ -352,8 +469,13 @@ const generarSimulacroCompleto = async (opciones) => {
   if (!matRows.length) throw new Error('Materia no encontrada');
   const materia = matRows[0].nombre;
 
-  const { rows: nivRows } = await db.query('SELECT nombre FROM nivel WHERE id = $1', [id_nivel]);
-  const nivel = nivRows.length ? nivRows[0].nombre : 'General';
+  // Mapa de competencia → id_nivel para asignar el nivel correcto a cada pregunta
+  const { rows: todosNiveles } = await db.query('SELECT id, nombre FROM nivel');
+  const nivelIdPorCompetencia = {};
+  for (const row of todosNiveles) {
+    const comp = _nivelToCompetencia(row.nombre);
+    if (comp) nivelIdPorCompetencia[comp] = row.id;
+  }
 
   let nodo = 'Temas Generales';
   if (id_nodo) {
@@ -362,26 +484,35 @@ const generarSimulacroCompleto = async (opciones) => {
   }
 
   const distr = _getDificultadStats(cantidad, mezclar_dificultad);
-  let todasPreguntas = [];
-
   const contextData = { id_usuario: id_usuario_admin, id_materia, id_nodo };
 
-  // Anotar cada pregunta con su dificultad DB para el INSERT posterior
-  if (distr.facil > 0) {
-    const p = await generarPreguntas({ materia, nodo, subtema: '', nivel, dificultad: 'facil', cantidad: distr.facil, tipo: 'seleccion_multiple' }, contextData);
-    todasPreguntas.push(...p.map(q => ({ ...q, _dificultadDB: 'facil' })));
-  }
-  if (distr.media > 0) {
-    const p = await generarPreguntas({ materia, nodo, subtema: '', nivel, dificultad: 'media', cantidad: distr.media, tipo: 'seleccion_multiple' }, contextData);
-    todasPreguntas.push(...p.map(q => ({ ...q, _dificultadDB: 'media' })));
-  }
-  if (distr.dificil > 0) {
-    const p = await generarPreguntas({ materia, nodo, subtema: '', nivel, dificultad: 'dificil', cantidad: distr.dificil, tipo: 'seleccion_multiple' }, contextData);
-    todasPreguntas.push(...p.map(q => ({ ...q, _dificultadDB: 'dificil' })));
-  }
+  // Para el simulacro completo no se fuerza una sola competencia: se pasa un nivel neutro
+  // para que el PROMPT_SISTEMA aplique la distribución 30/40/30 entre las tres competencias.
+  // La asignación de id_nivel por pregunta se hace abajo usando nivelIdPorCompetencia.
+  const nivelSimulacro = 'Mixto (distribución ICFES Saber 11)';
 
-  // Shuffle para no tener todas las fáciles al inicio
-  todasPreguntas = todasPreguntas.sort(() => Math.random() - 0.5).slice(0, cantidad);
+  // Generación paralela de las tres franjas de dificultad
+  const [pFacil, pMedia, pDificil] = await Promise.all([
+    distr.facil > 0
+      ? generarPreguntas({ materia, nodo, subtema: '', nivel: nivelSimulacro, descripcion_nivel: null, dificultad: 'facil',  cantidad: distr.facil,  tipo: 'seleccion_multiple' }, contextData)
+          .then(p => p.map(q => ({ ...q, _dificultadDB: 'facil' })))
+      : Promise.resolve([]),
+    distr.media > 0
+      ? generarPreguntas({ materia, nodo, subtema: '', nivel: nivelSimulacro, descripcion_nivel: null, dificultad: 'media',  cantidad: distr.media,  tipo: 'seleccion_multiple' }, contextData)
+          .then(p => p.map(q => ({ ...q, _dificultadDB: 'media' })))
+      : Promise.resolve([]),
+    distr.dificil > 0
+      ? generarPreguntas({ materia, nodo, subtema: '', nivel: nivelSimulacro, descripcion_nivel: null, dificultad: 'dificil', cantidad: distr.dificil, tipo: 'seleccion_multiple' }, contextData)
+          .then(p => p.map(q => ({ ...q, _dificultadDB: 'dificil' })))
+      : Promise.resolve([]),
+  ]);
+  let todasPreguntas = [...pFacil, ...pMedia, ...pDificil];
+
+  // Shuffle Fisher-Yates para distribuir dificultades homogéneamente
+  todasPreguntas = _shuffle(todasPreguntas).slice(0, cantidad);
+
+  // Advertir si la distribución de competencias se desvía del 30/40/30 esperado
+  _validarDistribucionCompetencias(todasPreguntas, todasPreguntas.length);
 
   // Iniciar transacción para guardar
   return await db.transaction(async (client) => {
@@ -398,11 +529,16 @@ const generarSimulacroCompleto = async (opciones) => {
     for (const p of todasPreguntas) {
       // p.dificultad y p.tipo pueden estar ausentes en el nuevo schema (usa fallbacks seguros)
       const dificuladDB = p.dificultad || p._dificultadDB || 'media';
-      const tipoInsert  = p.tipo       || 'seleccion_multiple';
+      const tipoInsert = p.tipo || 'seleccion_multiple';
+      // Usar el id_nivel de la competencia que Gemini asignó a la pregunta (si existe en la BD),
+      // de lo contrario usar el id_nivel del simulacro
+      const idNivelPregunta = (p.competencia && nivelIdPorCompetencia[p.competencia])
+        ? nivelIdPorCompetencia[p.competencia]
+        : id_nivel;
       const { rows: pRows } = await client.query(
         `INSERT INTO pregunta (id_nodo, id_nivel, enunciado, texto_base, dificultad, tipo, explicacion, activa, creado_por, creado_en)
          VALUES ($1, $2, $3, $4, $5, $6, $7, true, $8, NOW()) RETURNING id`,
-        [id_nodo || null, id_nivel, p.enunciado, p.texto_base || null, dificuladDB, tipoInsert, p.explicacion, id_usuario_admin]
+        [id_nodo || null, idNivelPregunta, p.enunciado, p.texto_base || null, dificuladDB, tipoInsert, p.explicacion, id_usuario_admin]
       );
       const idPreg = pRows[0].id;
 
@@ -429,12 +565,15 @@ const generarSimulacroCompleto = async (opciones) => {
 };
 
 const mejorarPregunta = async (idPregunta, contextData) => {
-  // Lógica similar pero con un prompt de mejora
-  throw new Error('Función mejorarPregunta en desarrollo');
+  const err = new Error('Función mejorarPregunta aún no implementada');
+  err.statusCode = 501;
+  throw err;
 };
 
 const generarExplicacion = async (idPregunta, contextData) => {
-  throw new Error('Función generarExplicacion en desarrollo');
+  const err = new Error('Función generarExplicacion aún no implementada');
+  err.statusCode = 501;
+  throw err;
 };
 
 module.exports = {

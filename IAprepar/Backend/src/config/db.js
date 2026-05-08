@@ -3,12 +3,19 @@
 const { Pool } = require('pg');
 const logger   = require('../utils/logger');
 
+const _required = ['PGHOST', 'PGUSER', 'PGPASSWORD', 'PGDATABASE'];
+for (const key of _required) {
+  if (!process.env[key]) {
+    throw new Error(`Variable de entorno faltante: ${key}. Revisa tu archivo .env`);
+  }
+}
+
 const pool = new Pool({
-  host:               process.env.PGHOST     || 'aws-1-us-west-2.pooler.supabase.com',
+  host:               process.env.PGHOST,
   port:               parseInt(process.env.PGPORT || '6543', 10),
-  database:           process.env.PGDATABASE || 'postgres',
-  user:               process.env.PGUSER     || 'postgres.eajateyhrufsggshxppq',
-  password:           process.env.PGPASSWORD || 'SamUeL#2005SaEz',
+  database:           process.env.PGDATABASE,
+  user:               process.env.PGUSER,
+  password:           process.env.PGPASSWORD,
   ssl:                { rejectUnauthorized: false },
   max:                parseInt(process.env.PG_MAX_POOL || '10', 10),
   idleTimeoutMillis:  parseInt(process.env.PG_IDLE_TIMEOUT || '30000', 10),

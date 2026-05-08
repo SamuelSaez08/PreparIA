@@ -8,7 +8,8 @@
 /* ──────────────────────────────────────────────────────────
    0. CONFIGURACIÓN BASE
 ────────────────────────────────────────────────────────── */
-const API_BASE_URL = 'http://localhost:3000/api/v1';
+const API_BASE_URL = (typeof PREPARIA_CONFIG !== 'undefined' ? PREPARIA_CONFIG.API_BASE_URL : null)
+  || 'http://localhost:3000/api/v1';
 
 /* ──────────────────────────────────────────────────────────
    1. SESSION HELPERS
@@ -107,7 +108,7 @@ async function apiFetch(endpoint, options = {}) {
   // Handle 401 — unauthorized
   if (response.status === 401) {
     Session.clearSession();
-    window.location.href = 'login';
+    window.location.href = 'login.html';
     throw { ok: false, status: 401, mensaje: data.mensaje || 'Sesión expirada. Inicia sesión de nuevo.' };
   }
 
@@ -181,7 +182,7 @@ const AuthAPI = {
       // Even if the API call fails, we still want to clear the session
     }
     Session.clearSession();
-    window.location.href = 'login';
+    window.location.href = 'login.html';
   },
 };
 
@@ -290,9 +291,10 @@ const SimulacrosAPI = {
     });
   },
 
-  async finalizarIntento(idIntento) {
+  async finalizarIntento(idIntento, tiempoUsado) {
     return apiFetch(`/intentos/${idIntento}/finalizar`, {
       method: 'POST',
+      body: tiempoUsado != null ? { tiempo_usado: tiempoUsado } : undefined,
     });
   },
 
@@ -371,8 +373,8 @@ const IAAPI = {
    11. RankingAPI — Leaderboard y estadísticas de gamificación
 ────────────────────────────────────────────────────────── */
 const RankingAPI = {
-  async getRanking(period = 'all_time') {
-    return apiFetch(`/ranking?period=${encodeURIComponent(period)}`);
+  async getRanking(period = 'all_time', limit = 50, offset = 0) {
+    return apiFetch(`/ranking?period=${encodeURIComponent(period)}&limit=${limit}&offset=${offset}`);
   },
 
   async getUserStats(userId) {

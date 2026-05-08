@@ -5,7 +5,7 @@ const gamificacionRepo = require('../repositories/gamificacion.repo');
 
 // Llama la función atómica de PostgreSQL al finalizar un simulacro
 const procesarFinSimulacro = async (idUsuario, idSimulacro, puntaje) => {
-  const basePoints = Math.round(puntaje * 10 / 10);
+  const basePoints = Math.round(puntaje);
   const isPerfect  = puntaje === 100;
 
   const { rows } = await gamificacionRepo.callCompleteSimulation(idUsuario, idSimulacro, basePoints, isPerfect);
@@ -18,8 +18,10 @@ const procesarFinSimulacro = async (idUsuario, idSimulacro, puntaje) => {
   return resultado;
 };
 
+const PAGE_SIZE_MAX = 100;
+
 // Obtiene el leaderboard según el período solicitado
-const getLeaderboard = async (period = 'all_time', idUsuarioActual = null) => {
+const getLeaderboard = async (period = 'all_time', idUsuarioActual = null, limit = 50, offset = 0) => {
   const vistas = {
     all_time: 'v_leaderboard_alltime',
     weekly:   'v_leaderboard_weekly',
@@ -33,7 +35,13 @@ const getLeaderboard = async (period = 'all_time', idUsuarioActual = null) => {
     throw err;
   }
 
-  const { rows: ranking } = await gamificacionRepo.getLeaderboard(vista);
+  const safeLimit  = Math.min(Math.max(1, parseInt(limit,  10) || 50), PAGE_SIZE_MAX);
+  const safeOffset = Math.max(0, parseInt(offset, 10) || 0);
+
+  const { rows } = await gamificacionRepo.getLeaderboard(vista, safeLimit, safeOffset);
+
+  const totalEntries = rows.length ? parseInt(rows[0].total_entries, 10) : 0;
+  const ranking = rows.map(({ total_entries, ...rest }) => rest);
 
   let posicionUsuario = null;
   if (idUsuarioActual) {
@@ -48,14 +56,20 @@ const getLeaderboard = async (period = 'all_time', idUsuarioActual = null) => {
     }
   }
 
-  return { ranking, posicion_usuario: posicionUsuario };
+  return { ranking, posicion_usuario: posicionUsuario, total_entries: totalEntries, limit: safeLimit, offset: safeOffset };
 };
 
 // Obtiene estadísticas completas de un usuario: stats + escudos + historial 30 días
 const getEstadisticasUsuario = async (idUsuario) => {
-  const { rows: statsRows }    = await gamificacionRepo.getUserStats(idUsuario);
-  const { rows: shieldsRows }  = await gamificacionRepo.getShields(idUsuario);
-  const { rows: actividadRows } = await gamificacionRepo.getActividad30d(idUsuario);
+  const [
+    { rows: statsRows },
+    { rows: shieldsRows },
+    { rows: actividadRows },
+  ] = await Promise.all([
+    gamificacionRepo.getUserStats(idUsuario),
+    gamificacionRepo.getShields(idUsuario),
+    gamificacionRepo.getActividad30d(idUsuario),
+  ]);
 
   return {
     stats:                   statsRows.length ? statsRows[0] : null,
