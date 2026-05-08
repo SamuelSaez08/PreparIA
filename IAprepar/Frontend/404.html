@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PreparIA — Página no encontrada</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎓</text></svg>">
+  <style>
+    .error-wrap {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 40px 24px;
+      gap: 16px;
+    }
+    .error-code {
+      font-size: clamp(5rem, 20vw, 9rem);
+      font-weight: 900;
+      letter-spacing: -0.06em;
+      line-height: 1;
+      color: var(--acid);
+    }
+    .error-title {
+      font-size: clamp(1.4rem, 4vw, 2rem);
+      font-weight: 800;
+    }
+    .error-sub {
+      color: rgba(245,245,240,0.5);
+      max-width: 400px;
+      font-size: 1rem;
+    }
+    .error-actions {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-top: 8px;
+    }
+  </style>
+</head>
+<body>
+  <div class="error-wrap">
+    <div class="error-code">404</div>
+    <div class="error-title">Página no encontrada</div>
+    <p class="error-sub">La ruta que buscas no existe o fue movida. Vuelve al inicio y continúa tu preparación.</p>
+    <div class="error-actions">
+      <a href="index.html"    class="btn btn-primary">Ir al inicio</a>
+      <a href="dashboard.html" class="btn btn-outline">Mi dashboard</a>
+    </div>
+  </div>
+</body>
+</html>

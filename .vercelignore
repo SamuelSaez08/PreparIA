@@ -1,0 +1,9 @@
+# Excluir backend — se despliega por separado (Render / Railway / Fly.io)
+IAprepar/Backend
+
+# Archivos de desarrollo
+*.md
+.env*
+.git
+.claude
+node_modules
