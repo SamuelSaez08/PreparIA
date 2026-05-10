@@ -3,7 +3,7 @@ const db = require('../config/db');
 
 const findArbolByMateria = (idMateria) =>
   db.query(
-    `SELECT id, nombre, descripcion, id_padre, id_nivel, orden
+    `SELECT id, nombre, descripcion AS icono, id_padre, id_nivel, orden
      FROM nodo_aprendizaje
      WHERE id_materia = $1 AND activo = true
      ORDER BY id_nivel, orden, nombre`,
@@ -25,25 +25,28 @@ const findAll = ({ materia, nivel, padre } = {}) => {
 
 const findMaterial = (idNodo) =>
   db.query(
-    'SELECT * FROM material_estudio WHERE id_nodo = $1 AND activo = true ORDER BY orden',
+    `SELECT id, id_nodo, titulo, cuerpo AS contenido, tipo, orden
+     FROM contenido_nodo
+     WHERE id_nodo = $1 AND activo = true
+     ORDER BY orden`,
     [idNodo]
   );
 
 const findPadre = (client, idPadre) =>
   client.query('SELECT id_materia, id_nivel FROM nodo_aprendizaje WHERE id = $1', [idPadre]);
 
-const insertNodo = (client, { nombre, icono, idPadre, idMateria, idNivel }) =>
+const insertNodo = (client, { nombre, idPadre, idMateria, idNivel }) =>
   client.query(
-    `INSERT INTO nodo_aprendizaje (nombre, descripcion, id_padre, id_materia, id_nivel)
-     VALUES ($1, $2, $3, $4, $5) RETURNING id`,
-    [nombre, icono || '📌', idPadre, idMateria, idNivel]
+    `INSERT INTO nodo_aprendizaje (nombre, id_padre, id_materia, id_nivel)
+     VALUES ($1, $2, $3, $4) RETURNING id`,
+    [nombre, idPadre, idMateria, idNivel]
   );
 
-const insertMaterial = (client, { idNodo, nombre, contenido, idUsuario }) =>
+const insertMaterial = (client, { idNodo, nombre, contenido }) =>
   client.query(
-    `INSERT INTO material_estudio (id_nodo, titulo, contenido, creado_por)
-     VALUES ($1, $2, $3, $4)`,
-    [idNodo, nombre, contenido, idUsuario]
+    `INSERT INTO contenido_nodo (id_nodo, titulo, cuerpo)
+     VALUES ($1, $2, $3)`,
+    [idNodo, nombre, contenido]
   );
 
 const findDescendientes = (client, id) =>
@@ -65,7 +68,7 @@ const updateNombre = (id, nombre) =>
   );
 
 const softDeleteMateriales = (client, ids) =>
-  client.query('UPDATE material_estudio SET activo = false WHERE id_nodo = ANY($1::int[])', [ids]);
+  client.query('UPDATE contenido_nodo SET activo = false WHERE id_nodo = ANY($1::int[])', [ids]);
 
 const softDeleteNodos = (client, ids) =>
   client.query('UPDATE nodo_aprendizaje SET activo = false WHERE id = ANY($1::int[])', [ids]);

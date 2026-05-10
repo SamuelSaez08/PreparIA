@@ -764,7 +764,7 @@ body::before {
   border-color: var(--acid);
 }
 .tree-node.level-0 > .tree-node-header .tree-node-label { color: var(--acid); font-size: 1.05rem; }
-.tree-leaf .tree-node-header { cursor: default; }
+.tree-leaf .tree-node-header { cursor: pointer; }
 .tree-leaf .tree-node-header:hover { transform: translateX(4px); }
 .add-node-btn {
   display: flex;

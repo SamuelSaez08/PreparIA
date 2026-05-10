@@ -32,8 +32,8 @@ const PageCienciasSociales = {
 
   async loadTree() {
     try {
-      const res        = await NodosAPI.getArbol(1);
-      const datos      = res.datos || res;
+      const res = await NodosAPI.getArbol(1);
+      const datos = res.datos || res;
       const backendTree = Array.isArray(datos) ? datos : (datos.hijos || datos.nodos || [datos]);
       TreeManager.setTreeFromBackend(backendTree);
     } catch (err) {
@@ -64,26 +64,27 @@ const PageCienciasSociales = {
 
   renderNode(node, level) {
     const hasChildren = node.children && node.children.length > 0;
-    const levelClass  = `level-${Math.min(level, 3)}`;
-    const leafClass   = !hasChildren ? 'tree-leaf' : '';
+    const levelClass = `level-${Math.min(level, 3)}`;
+    const leafClass = !hasChildren ? 'tree-leaf' : '';
+    const id = String(node.id);
 
     const addChildBtn = this.isAdmin
-      ? `<button class="tree-add-child-btn" onclick="event.stopPropagation(); PageCienciasSociales.addChildInline('${node.id}')" title="Agregar subtema">+</button>`
+      ? `<button class="tree-add-child-btn" data-add-child="${id}" title="Agregar subtema">+</button>`
       : '';
 
     return `
-      <div class="tree-node ${levelClass} ${leafClass}" id="node-${node.id}" data-node-id="${node.id}">
-        <div class="tree-node-header" onclick="${hasChildren ? `PageCienciasSociales.toggleNode('${node.id}')` : `PageCienciasSociales.showNodeContent('${node.id}')`}">
-          ${hasChildren ? '<div class="tree-toggle">▶</div>' : '<div style="width:22px"></div>'}
+      <div class="tree-node ${levelClass} ${leafClass}" id="node-${id}" data-node-id="${id}">
+        <div class="tree-node-header" data-navigate-id="${id}">
+          ${hasChildren ? `<div class="tree-toggle" data-toggle-id="${id}">▶</div>` : '<div style="width:22px"></div>'}
           <span style="font-size:1.1rem">${Utils.sanitizeHTML(node.icon || '📌')}</span>
-          <span class="tree-node-label" data-node-id="${node.id}">${Utils.sanitizeHTML(node.label)}</span>
+          <span class="tree-node-label" data-node-id="${id}">${Utils.sanitizeHTML(node.label)}</span>
           ${node.custom ? '<span class="badge badge-sky" style="margin-left:auto;font-size:0.65rem">Custom</span>' : ''}
           ${hasChildren ? `<span class="badge badge-outline tree-node-badge">${node.children.length}</span>` : ''}
           ${addChildBtn}
-          ${this.isAdmin ? `<button class="btn btn-ghost btn-sm" style="color:var(--coral);margin-left:8px;padding:0 4px" onclick="event.stopPropagation(); PageCienciasSociales.deleteNodeById('${node.id}')" title="Eliminar nodo">🗑️</button>` : ''}
+          ${this.isAdmin ? `<button class="btn btn-ghost btn-sm" style="color:var(--coral);margin-left:8px;padding:0 4px" data-delete-id="${id}" title="Eliminar nodo">🗑️</button>` : ''}
         </div>
         ${hasChildren ? `
-          <div class="tree-node-children" id="children-${node.id}">
+          <div class="tree-node-children" id="children-${id}">
             ${node.children.map(child => this.renderNode(child, level + 1)).join('')}
           </div>
         ` : ''}
@@ -96,7 +97,7 @@ const PageCienciasSociales = {
       .forEach(el => el.classList.remove('node-selected'));
     this.selectedNodeId = nodeId;
 
-    const header   = document.querySelector(`#node-${nodeId} > .tree-node-header`);
+    const header = document.querySelector(`#node-${nodeId} > .tree-node-header`);
     const children = document.getElementById(`children-${nodeId}`);
     if (!children) return;
     const isOpen = children.classList.toggle('open');
@@ -105,7 +106,7 @@ const PageCienciasSociales = {
   },
 
   showNodeContent(nodeId) {
-    window.location.href = `nodo.html?id=${encodeURIComponent(nodeId)}`;
+    window.location.href = `/nodo.html?id=${encodeURIComponent(nodeId)}`;
   },
 
   expandAll() {
@@ -145,17 +146,17 @@ const PageCienciasSociales = {
 
     const trigger = document.getElementById('add-node-card');
     if (trigger) {
-      const rect      = trigger.getBoundingClientRect();
-      const dropH     = 152;
-      const dropW     = 240;
+      const rect = trigger.getBoundingClientRect();
+      const dropH = 152;
+      const dropW = 240;
       const spaceAbove = rect.top;
-      var topPos  = spaceAbove >= dropH + 16 ? rect.top - dropH - 8 : rect.bottom + 8;
+      var topPos = spaceAbove >= dropH + 16 ? rect.top - dropH - 8 : rect.bottom + 8;
       var leftPos = Math.min(rect.left, window.innerWidth - dropW - 8);
       dropdown.style.position = 'fixed';
-      dropdown.style.top      = Math.max(8, topPos) + 'px';
-      dropdown.style.left     = Math.max(8, leftPos) + 'px';
-      dropdown.style.right    = 'auto';
-      dropdown.style.bottom   = 'auto';
+      dropdown.style.top = Math.max(8, topPos) + 'px';
+      dropdown.style.left = Math.max(8, leftPos) + 'px';
+      dropdown.style.right = 'auto';
+      dropdown.style.bottom = 'auto';
     }
 
     dropdown.style.display = 'block';
@@ -182,7 +183,7 @@ const PageCienciasSociales = {
       }
     }
 
-    setTimeout(function() {
+    setTimeout(function () {
       document.addEventListener('click', closeDropdown, true);
       document.addEventListener('keydown', onEsc);
     }, 0);
@@ -212,25 +213,25 @@ const PageCienciasSociales = {
 
   openAddModal(parentId, tipo = 'hijo') {
     document.getElementById('new-node-parent').value = (parentId !== null && parentId !== undefined) ? parentId : '';
-    document.getElementById('new-node-label').value  = '';
+    document.getElementById('new-node-label').value = '';
 
     const categoryGroup = document.getElementById('parent-category-group');
     const categoryLabel = document.getElementById('parent-category-label');
-    const modalTitle    = document.querySelector('#add-node-modal .modal-header h3');
+    const modalTitle = document.querySelector('#add-node-modal .modal-header h3');
 
     if (tipo === 'padre') {
-      if (modalTitle)    modalTitle.textContent = '🌳 Nuevo nodo padre';
+      if (modalTitle) modalTitle.textContent = '🌳 Nuevo nodo padre';
       if (categoryGroup) categoryGroup.style.display = 'none';
     } else {
-      if (modalTitle)    modalTitle.textContent = '➕ Agregar nodo';
+      if (modalTitle) modalTitle.textContent = '➕ Agregar nodo';
       if (categoryGroup) categoryGroup.style.display = '';
       if (categoryLabel) categoryLabel.textContent = 'Categoría principal';
 
-      const tree     = TreeManager.getTree();
+      const tree = TreeManager.getTree();
       const selector = document.getElementById('parent-category-selector');
       if (selector) {
         const activeId = (parentId !== null && parentId !== undefined) ? String(parentId) : '';
-        selector.innerHTML = tree.map(function(node, i) {
+        selector.innerHTML = tree.map(function (node, i) {
           var isSelected = (activeId && activeId === String(node.id)) || (!activeId && i === 0);
           return '<button type="button" class="icon-btn ' + (isSelected ? 'selected' : '') + '" title="' + node.label + '"' +
             ' onclick="document.getElementById(\'new-node-parent\').value=\'' + node.id + '\';' +
@@ -253,10 +254,10 @@ const PageCienciasSociales = {
   },
 
   async addNewNode() {
-    const parentId  = document.getElementById('new-node-parent').value;
-    const label     = document.getElementById('new-node-label').value.trim();
+    const parentId = document.getElementById('new-node-parent').value;
+    const label = document.getElementById('new-node-label').value.trim();
     const contentEl = document.getElementById('new-node-content');
-    const content   = contentEl ? contentEl.value.trim() : '';
+    const content = contentEl ? contentEl.value.trim() : '';
 
     if (!label) { UI.showToast('Escribe un nombre para el nodo.', 'error'); return; }
 
@@ -305,9 +306,9 @@ const PageCienciasSociales = {
 
     const originalText = labelSpan.textContent.trim();
     const input = document.createElement('input');
-    input.type      = 'text';
+    input.type = 'text';
     input.className = 'tree-inline-input';
-    input.value     = originalText;
+    input.value = originalText;
     input.setAttribute('data-original', originalText);
 
     labelSpan.textContent = '';
@@ -354,7 +355,7 @@ const PageCienciasSociales = {
       else if (e.key === 'Escape') { e.preventDefault(); cancel(); }
     });
     input.addEventListener('blur', () => setTimeout(() => save(), 80));
-    input.addEventListener('click',  (e) => e.stopPropagation());
+    input.addEventListener('click', (e) => e.stopPropagation());
     input.addEventListener('dblclick', (e) => e.stopPropagation());
   },
 
@@ -362,7 +363,7 @@ const PageCienciasSociales = {
     if (!this.isAdmin) return;
 
     let childrenContainer = document.getElementById(`children-${parentId}`);
-    const parentNodeEl    = document.getElementById(`node-${parentId}`);
+    const parentNodeEl = document.getElementById(`node-${parentId}`);
     if (!parentNodeEl) return;
 
     if (!childrenContainer) {
@@ -376,7 +377,7 @@ const PageCienciasSociales = {
     const header = parentNodeEl.querySelector(':scope > .tree-node-header');
     if (header) header.classList.add('open');
 
-    const tempId  = 'temp_' + Date.now();
+    const tempId = 'temp_' + Date.now();
     const tempDiv = document.createElement('div');
     tempDiv.className = 'tree-node tree-leaf temp-node';
     tempDiv.id = `node-${tempId}`;
@@ -397,10 +398,10 @@ const PageCienciasSociales = {
     tempDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 
     const labelSpan = tempDiv.querySelector('.tree-node-label');
-    const input     = document.createElement('input');
-    input.type      = 'text';
+    const input = document.createElement('input');
+    input.type = 'text';
     input.className = 'tree-inline-input';
-    input.value     = 'Nuevo tema';
+    input.value = 'Nuevo tema';
     input.setAttribute('data-original', '');
 
     labelSpan.textContent = '';
@@ -419,14 +420,14 @@ const PageCienciasSociales = {
       labelSpan.textContent = newName;
 
       try {
-        const res      = await NodosAPI.crearNodo({ id_padre: parentId, nombre: newName, icono: '📌' });
+        const res = await NodosAPI.crearNodo({ id_padre: parentId, nombre: newName, icono: '📌' });
         const serverId = res.datos?.id;
         if (serverId) {
           tempDiv.id = `node-${serverId}`;
           tempDiv.setAttribute('data-node-id', serverId);
           labelSpan.setAttribute('data-node-id', serverId);
           const headerEl = tempDiv.querySelector('.tree-node-header');
-          if (headerEl) headerEl.setAttribute('onclick', `PageCienciasSociales.showNodeContent('${serverId}')`);
+          if (headerEl) headerEl.setAttribute('data-navigate-id', String(serverId));
         }
         UI.showToast(`Nodo "${newName}" creado exitosamente.`, 'success');
         const parentBadge = parentNodeEl.querySelector(':scope > .tree-node-header .tree-node-badge');
@@ -458,23 +459,57 @@ const PageCienciasSociales = {
         }
       }, 80);
     });
-    input.addEventListener('click',   (e) => e.stopPropagation());
+    input.addEventListener('click', (e) => e.stopPropagation());
     input.addEventListener('dblclick', (e) => e.stopPropagation());
   },
 
   setupInlineEditListeners() {
-    if (!this.isAdmin) return;
     const container = document.getElementById('tree-container');
-    if (!container || container._inlineEditBound) return;
-    container._inlineEditBound = true;
+    if (!container || container._treeBound) return;
+    container._treeBound = true;
 
-    container.addEventListener('dblclick', (e) => {
-      const label = e.target.closest('.tree-node-label');
-      if (!label) return;
-      e.preventDefault();
-      e.stopPropagation();
-      const nodeId = label.getAttribute('data-node-id');
-      if (nodeId) this.startInlineEdit(nodeId);
+    container.addEventListener('click', (e) => {
+      // Toggle expand/collapse
+      const toggle = e.target.closest('[data-toggle-id]');
+      if (toggle) {
+        e.stopPropagation();
+        this.toggleNode(toggle.getAttribute('data-toggle-id'));
+        return;
+      }
+
+      // Add child (admin only)
+      const addBtn = e.target.closest('[data-add-child]');
+      if (addBtn && this.isAdmin) {
+        e.stopPropagation();
+        this.addChildInline(addBtn.getAttribute('data-add-child'));
+        return;
+      }
+
+      // Delete node (admin only)
+      const delBtn = e.target.closest('[data-delete-id]');
+      if (delBtn && this.isAdmin) {
+        e.stopPropagation();
+        this.deleteNodeById(delBtn.getAttribute('data-delete-id'));
+        return;
+      }
+
+      // Navigate to node content
+      const header = e.target.closest('[data-navigate-id]');
+      if (header) {
+        const nodeId = header.getAttribute('data-navigate-id');
+        if (nodeId) this.showNodeContent(nodeId);
+      }
     });
+
+    if (this.isAdmin) {
+      container.addEventListener('dblclick', (e) => {
+        const label = e.target.closest('.tree-node-label');
+        if (!label) return;
+        e.preventDefault();
+        e.stopPropagation();
+        const nodeId = label.getAttribute('data-node-id');
+        if (nodeId) this.startInlineEdit(nodeId);
+      });
+    }
   },
 };

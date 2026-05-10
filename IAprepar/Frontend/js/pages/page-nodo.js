@@ -11,21 +11,38 @@ const PageNodo = {
     const params = new URLSearchParams(window.location.search);
     const nodeId = params.get('id');
 
-    if (!nodeId) { this.showError('No se especificó un nodo.'); return; }
+    if (!nodeId) { window.location.href = 'ciencias-sociales.html'; return; }
 
-    State.remove(State.KEYS.TREE_NODES);
-
-    try {
-      const res         = await NodosAPI.getArbol(1);
-      const datos       = res.datos || res;
-      const backendTree = Array.isArray(datos) ? datos : (datos.hijos || datos.nodos || [datos]);
-      TreeManager.setTreeFromBackend(backendTree);
-    } catch (err) {
-      console.warn('Could not load tree from backend:', err);
+    // Cargar árbol del backend solo si no está en localStorage
+    if (!TreeManager.getTree().length) {
+      try {
+        const res = await NodosAPI.getArbol(1);
+        const datos = res.datos || res;
+        const backendTree = Array.isArray(datos) ? datos : (datos.hijos || datos.nodos || [datos]);
+        TreeManager.setTreeFromBackend(backendTree);
+      } catch (err) {
+        console.warn('Could not load tree from backend:', err);
+      }
     }
 
-    const node = TreeManager.getNodeById(nodeId);
-    if (!node) { this.showError('No se encontró el nodo solicitado.'); return; }
+    let node = TreeManager.getNodeById(nodeId);
+
+    if (!node) {
+      try {
+        const res = await NodosAPI.getNodo(nodeId);
+        const raw = res.datos || res;
+        node = {
+          id: raw.id,
+          label: raw.nombre || 'Sin nombre',
+          icon: raw.icono || raw.descripcion || '📌',
+          description: '',
+          children: [],
+        };
+      } catch (err) {
+        this.showError('No se encontró el nodo solicitado.');
+        return;
+      }
+    }
 
     this.renderHeader(node, nodeId);
     await this.loadContent(node, nodeId);
@@ -34,14 +51,14 @@ const PageNodo = {
   },
 
   renderHeader(node, nodeId) {
-    const iconEl       = document.getElementById('node-icon');
-    const titleEl      = document.getElementById('node-title');
+    const iconEl = document.getElementById('node-icon');
+    const titleEl = document.getElementById('node-title');
     const breadcrumbEl = document.getElementById('breadcrumb-current');
-    const metaEl       = document.getElementById('node-meta');
+    const metaEl = document.getElementById('node-meta');
 
-    if (iconEl)       iconEl.textContent       = node.icon || '📌';
-    if (titleEl)      titleEl.textContent       = node.label;
-    if (breadcrumbEl) breadcrumbEl.textContent  = node.label;
+    if (iconEl) iconEl.textContent = node.icon || '📌';
+    if (titleEl) titleEl.textContent = node.label;
+    if (breadcrumbEl) breadcrumbEl.textContent = node.label;
 
     const path = this.findPath(nodeId);
     if (path.length > 1) {
@@ -97,7 +114,7 @@ const PageNodo = {
 
     try {
       if (typeof node.id === 'number' || !isNaN(parseInt(nodeId))) {
-        const res        = await NodosAPI.getMaterial(nodeId);
+        const res = await NodosAPI.getMaterial(nodeId);
         const materiales = res.datos || [];
 
         if (materiales.length > 0) {
@@ -155,7 +172,7 @@ const PageNodo = {
     if (!node.children || !node.children.length) return;
 
     const section = document.getElementById('node-children-section');
-    const list    = document.getElementById('node-children-list');
+    const list = document.getElementById('node-children-list');
     if (!section || !list) return;
 
     section.style.display = 'block';
@@ -177,7 +194,7 @@ const PageNodo = {
 
   showError(message) {
     const contentArea = document.getElementById('node-content-area');
-    const heroEl      = document.getElementById('node-hero');
+    const heroEl = document.getElementById('node-hero');
     if (heroEl) heroEl.style.display = 'none';
     if (contentArea) {
       contentArea.innerHTML = `
@@ -190,7 +207,7 @@ const PageNodo = {
   },
 
   getFlattenedTree() {
-    const flat     = [];
+    const flat = [];
     const traverse = (nodes) => {
       for (const n of nodes) {
         flat.push(n);
@@ -203,11 +220,11 @@ const PageNodo = {
 
   renderNavigation(nodeId) {
     const flat = this.getFlattenedTree();
-    const idx  = flat.findIndex(n => String(n.id) === String(nodeId));
+    const idx = flat.findIndex(n => String(n.id) === String(nodeId));
 
     const navContainer = document.getElementById('node-navigation');
-    const btnPrev      = document.getElementById('btn-prev-node');
-    const btnNext      = document.getElementById('btn-next-node');
+    const btnPrev = document.getElementById('btn-prev-node');
+    const btnNext = document.getElementById('btn-next-node');
 
     if (!navContainer || idx === -1) return;
 
@@ -216,7 +233,7 @@ const PageNodo = {
     if (idx > 0) {
       const prev = flat[idx - 1];
       btnPrev.style.visibility = 'visible';
-      btnPrev.innerHTML        = `← ${Utils.sanitizeHTML(prev.label)}`;
+      btnPrev.innerHTML = `← ${Utils.sanitizeHTML(prev.label)}`;
       btnPrev.onclick = () => window.location.href = `nodo.html?id=${encodeURIComponent(prev.id)}`;
     } else {
       btnPrev.style.visibility = 'hidden';
@@ -225,7 +242,7 @@ const PageNodo = {
     if (idx < flat.length - 1) {
       const next = flat[idx + 1];
       btnNext.style.visibility = 'visible';
-      btnNext.innerHTML        = `${Utils.sanitizeHTML(next.label)} →`;
+      btnNext.innerHTML = `${Utils.sanitizeHTML(next.label)} →`;
       btnNext.onclick = () => window.location.href = `nodo.html?id=${encodeURIComponent(next.id)}`;
     } else {
       btnNext.style.visibility = 'hidden';
