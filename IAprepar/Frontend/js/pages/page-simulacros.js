@@ -159,6 +159,14 @@ const PageSimulacros = {
       s.timeLeft      = (datos.simulacro?.duracion_minutos || 20) * 60;
       s.startTime     = Date.now();
 
+      // Bug B fix: restore timer from sessionStorage if the page was reloaded mid-simulacro
+      if (s.intentoId) {
+        const saved = parseInt(sessionStorage.getItem(`preparia_timer_${s.intentoId}`), 10);
+        if (Number.isFinite(saved) && saved > 0 && saved < s.timeLeft) {
+          s.timeLeft = saved;
+        }
+      }
+
       document.getElementById('simulacro-start')?.classList.add('hidden');
       document.getElementById('simulacro-quiz')?.classList.remove('hidden');
 
@@ -269,10 +277,22 @@ const PageSimulacros = {
   },
 
   startTimer() {
-    const s       = this.state;
-    const display = document.getElementById('timer');
+    const s = this.state;
+
+    // Bug A fix: clear any existing interval before starting a new one
+    clearInterval(s.timer);
+    s.timer = null;
+
+    // Render immediately so the display shows the correct (possibly restored) time
+    const initialDisplay = document.getElementById('timer');
+    if (initialDisplay) initialDisplay.textContent = Utils.formatTime(s.timeLeft);
+
+    const storageKey = `preparia_timer_${s.intentoId}`;
     s.timer = setInterval(() => {
       s.timeLeft--;
+      // Bug B fix: persist remaining time on every tick
+      sessionStorage.setItem(storageKey, s.timeLeft);
+      const display = document.getElementById('timer');
       if (display) {
         display.textContent = Utils.formatTime(s.timeLeft);
         display.className   = 'timer-display';
@@ -288,6 +308,8 @@ const PageSimulacros = {
     if (s.finished) return;
     s.finished = true;
     clearInterval(s.timer);
+    // Bug B fix: clear sessionStorage when the simulacro ends
+    sessionStorage.removeItem(`preparia_timer_${s.intentoId}`);
 
     const timeUsed = Math.round((Date.now() - s.startTime) / 1000);
 

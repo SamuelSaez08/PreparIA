@@ -80,7 +80,7 @@ const finalizarIntento = async (idIntento, idUsuario, tiempoUsado = null) => {
 
     const { rows: intentoActualizado } = await intentoRepo.updateFinalizado(
       client, idIntento, ESTADOS.COMPLETADO, puntaje,
-      parseInt(correctas, 10), parseInt(incorrectas, 10)
+      parseInt(correctas, 10), parseInt(incorrectas, 10), tiempoUsado
     );
 
     await _actualizarProgreso(client, idUsuario, intento.id_simulacro, puntaje, parseInt(correctas, 10), totalPreguntas);

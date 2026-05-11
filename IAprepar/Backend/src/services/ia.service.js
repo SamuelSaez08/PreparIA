@@ -524,36 +524,55 @@ const generarSimulacroCompleto = async (opciones) => {
     );
     const idSimulacro = sRows[0].id;
 
-    let indexPregunta = 1;
-    // 2. Insertar preguntas y opciones
-    for (const p of todasPreguntas) {
-      // p.dificultad y p.tipo pueden estar ausentes en el nuevo schema (usa fallbacks seguros)
-      const dificuladDB = p.dificultad || p._dificultadDB || 'media';
-      const tipoInsert = p.tipo || 'seleccion_multiple';
-      // Usar el id_nivel de la competencia que Gemini asignó a la pregunta (si existe en la BD),
-      // de lo contrario usar el id_nivel del simulacro
-      const idNivelPregunta = (p.competencia && nivelIdPorCompetencia[p.competencia])
+    // 2. Batch INSERT preguntas — una sola query en lugar de N
+    // Antes: 1 + N + 4N + N = 1 + 6N queries. Ahora: 4 queries fijas.
+    console.time('batch-insert-simulacro');
+    const idNodos      = todasPreguntas.map(() => id_nodo || null);
+    const idNiveles    = todasPreguntas.map(p =>
+      (p.competencia && nivelIdPorCompetencia[p.competencia])
         ? nivelIdPorCompetencia[p.competencia]
-        : id_nivel;
-      const { rows: pRows } = await client.query(
-        `INSERT INTO pregunta (id_nodo, id_nivel, enunciado, texto_base, dificultad, tipo, explicacion, activa, creado_por, creado_en)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, true, $8, NOW()) RETURNING id`,
-        [id_nodo || null, idNivelPregunta, p.enunciado, p.texto_base || null, dificuladDB, tipoInsert, p.explicacion, id_usuario_admin]
-      );
-      const idPreg = pRows[0].id;
+        : id_nivel
+    );
+    const enunciados   = todasPreguntas.map(p => p.enunciado);
+    const textoBases   = todasPreguntas.map(p => p.texto_base || null);
+    const dificultades = todasPreguntas.map(p => p.dificultad || p._dificultadDB || 'media');
+    const tipos        = todasPreguntas.map(p => p.tipo || 'seleccion_multiple');
+    const explicaciones = todasPreguntas.map(p => p.explicacion);
 
-      for (const op of p.opciones) {
-        await client.query(
-          `INSERT INTO opcion_respuesta (id_pregunta, texto, letra, es_correcta) VALUES ($1, $2, $3, $4)`,
-          [idPreg, op.texto, op.letra, op.es_correcta]
-        );
+    const { rows: preguntasInsertadas } = await client.query(
+      `INSERT INTO pregunta (id_nodo, id_nivel, enunciado, texto_base, dificultad, tipo, explicacion, activa, creado_por, creado_en)
+       SELECT unnest($1::int[]), unnest($2::int[]), unnest($3::text[]), unnest($4::text[]),
+              unnest($5::text[]), unnest($6::text[]), unnest($7::text[]), true, $8, NOW()
+       RETURNING id`,
+      [idNodos, idNiveles, enunciados, textoBases, dificultades, tipos, explicaciones, id_usuario_admin]
+    );
+
+    // 3. Batch INSERT opciones — una sola query en lugar de 4N
+    const opIdPreguntas = [], opTextos = [], opLetras = [], opEsCorrectas = [];
+    preguntasInsertadas.forEach((row, i) => {
+      for (const op of todasPreguntas[i].opciones) {
+        opIdPreguntas.push(row.id);
+        opTextos.push(op.texto);
+        opLetras.push(op.letra);
+        opEsCorrectas.push(op.es_correcta);
       }
+    });
+    await client.query(
+      `INSERT INTO opcion_respuesta (id_pregunta, texto, letra, es_correcta)
+       SELECT unnest($1::int[]), unnest($2::text[]), unnest($3::text[]), unnest($4::bool[])`,
+      [opIdPreguntas, opTextos, opLetras, opEsCorrectas]
+    );
 
-      await client.query(
-        `INSERT INTO simulacro_pregunta (id_simulacro, id_pregunta, orden) VALUES ($1, $2, $3)`,
-        [idSimulacro, idPreg, indexPregunta++]
-      );
-    }
+    // 4. Batch INSERT simulacro_pregunta — una sola query en lugar de N
+    const spIdPreguntas = preguntasInsertadas.map(r => r.id);
+    const spOrdenes     = preguntasInsertadas.map((_, i) => i + 1);
+    await client.query(
+      `INSERT INTO simulacro_pregunta (id_simulacro, id_pregunta, orden)
+       SELECT $1, unnest($2::int[]), unnest($3::int[])`,
+      [idSimulacro, spIdPreguntas, spOrdenes]
+    );
+    console.timeEnd('batch-insert-simulacro');
+    logger.info(`[ia.service] Simulacro ${idSimulacro}: ${todasPreguntas.length} preguntas insertadas en batch (${opIdPreguntas.length} opciones)`);
 
     return {
       id_simulacro: idSimulacro,

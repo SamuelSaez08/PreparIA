@@ -36,11 +36,13 @@ const getStats = (client, idIntento) =>
     [idIntento]
   );
 
-const updateFinalizado = (client, idIntento, estado, puntaje, correctas, incorrectas) =>
+const updateFinalizado = (client, idIntento, estado, puntaje, correctas, incorrectas, tiempoUsado = null) =>
   client.query(
-    `UPDATE intento_simulacro SET estado=$1, finalizado_en=NOW(), puntaje_obtenido=$2, correctas=$3, incorrectas=$4
+    `UPDATE intento_simulacro
+     SET estado=$1, finalizado_en=NOW(), puntaje_obtenido=$2, correctas=$3, incorrectas=$4,
+         tiempo_usado_segundos=COALESCE($6, tiempo_usado_segundos)
      WHERE id=$5 RETURNING *`,
-    [estado, puntaje, correctas, incorrectas, idIntento]
+    [estado, puntaje, correctas, incorrectas, idIntento, tiempoUsado]
   );
 
 const getRetroalimentacion = (client, idIntento) =>

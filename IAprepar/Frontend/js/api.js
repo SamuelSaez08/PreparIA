@@ -8,8 +8,10 @@
 /* ──────────────────────────────────────────────────────────
    0. CONFIGURACIÓN BASE
 ────────────────────────────────────────────────────────── */
-const API_BASE_URL = (typeof PREPARIA_CONFIG !== 'undefined' ? PREPARIA_CONFIG.API_BASE_URL : null)
-  || 'http://localhost:3000/api/v1';
+if (typeof PREPARIA_CONFIG === 'undefined') {
+  throw new Error('[PreparIA] config.js no está cargado. Asegúrate de incluir <script src="js/config.js"></script> ANTES de api.js.');
+}
+const API_BASE_URL = PREPARIA_CONFIG.API_BASE_URL;
 
 /* ──────────────────────────────────────────────────────────
    1. SESSION HELPERS

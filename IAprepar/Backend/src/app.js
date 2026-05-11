@@ -21,11 +21,14 @@ app.use(helmet({
 }));
 
 // ── CORS
-const allowedOrigins = (process.env.CORS_ORIGIN || 'http://localhost:5500,http://127.0.0.1:5500,http://localhost:3001')
-  .split(',')
-  .map(o => o.trim());
+const allowedOrigins = [
+  process.env.FRONTEND_URL,
+  ...(process.env.CORS_ORIGIN || 'http://localhost:5500,http://127.0.0.1:5500,http://localhost:3001')
+    .split(',')
+    .map(o => o.trim()),
+].filter(Boolean);
 
-app.use(cors({
+const corsOptions = {
   origin: (origin, callback) => {
     if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
     callback(new Error(`CORS: Origen no permitido → ${origin}`));
@@ -35,7 +38,11 @@ app.use(cors({
   exposedHeaders:     ['X-RateLimit-Limit', 'X-RateLimit-Remaining'],
   credentials:        true,
   optionsSuccessStatus: 204,
-}));
+};
+
+// Preflight explícito — necesario para peticiones con Authorization header desde Vercel
+app.options('*', cors(corsOptions));
+app.use(cors(corsOptions));
 
 // ── Rate limiter
 app.use(rateLimiter);

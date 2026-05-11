@@ -47,7 +47,10 @@
       "Bash(grep -E \"\\\\.env$|debug_db\")",
       "Bash(git add *)",
       "Bash(git commit -m ' *)",
-      "Bash(grep -E \"\\\\.env$\")"
+      "Bash(grep -E \"\\\\.env$\")",
+      "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\samue\\\\OneDrive\\\\Escritorio\\\\IAprepar\\\\IAprepar\\\\Backend\\\\src\" -Recurse -Filter \"*.js\")",
+      "Bash(Select-Object -ExpandProperty FullName)",
+      "Bash(dir \"c:\\\\Users\\\\samue\\\\OneDrive\\\\Escritorio\\\\IAprepar\\\\IAprepar\\\\Frontend\")"
     ]
   }
 }
