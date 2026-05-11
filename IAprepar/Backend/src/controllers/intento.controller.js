@@ -71,14 +71,19 @@ const finalizarIntento = async (req, res, next) => {
     // Procesar gamificación y puntos al finalizar el simulacro
     let gamificacion = null;
     try {
+      const idSimulacro = result.intento?.id_simulacro;
+      console.log('[fn_complete_simulation] llamando con intentoId:', idIntento, 'idUsuario:', idUsuario, 'idSimulacro:', idSimulacro, 'puntaje:', result.puntaje);
+      if (!idSimulacro) throw new Error(`id_simulacro indefinido en intento ${idIntento} — intento obj: ${JSON.stringify(result.intento)}`);
       gamificacion = await gamificacionService.procesarFinSimulacro(
         idUsuario,
-        result.intento.id_simulacro,
+        idSimulacro,
         result.puntaje
       );
+      console.log('[fn_complete_simulation] completado:', JSON.stringify(gamificacion));
     } catch (gamErr) {
       // Error de gamificación no debe romper la finalización del simulacro
-      logger.error('Error al procesar gamificación:', gamErr.message);
+      console.error('[fn_complete_simulation] ERROR:', gamErr.message, { code: gamErr.code, detail: gamErr.detail, hint: gamErr.hint, stack: gamErr.stack });
+      logger.error('Error al procesar gamificación:', gamErr.message, { code: gamErr.code, detail: gamErr.detail });
     }
 
     return ok(res, 'Simulacro finalizado.', { ...result, porcentaje: result.puntaje, gamificacion });
