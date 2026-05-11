@@ -6,7 +6,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>PreparIA — Contenido del Nodo</title>
   <meta name="robots" content="noindex, nofollow">
-  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎓</text></svg>">
+  <link rel="icon" type="image/svg+xml"
+    href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎓</text></svg>">
   <link rel="stylesheet" href="css/styles.css">
   <style>
     /* ── Node Content Page ── */
@@ -16,6 +17,8 @@
       border-bottom: 2px solid rgba(245, 245, 240, 0.08);
       margin-bottom: 40px;
       overflow: hidden;
+      position: relative;
+      z-index: 1;
     }
 
     .node-page-hero::before {
@@ -379,9 +382,12 @@
       </div>
 
       <!-- Node Navigation -->
-      <div class="node-navigation" id="node-navigation" style="display:none; margin-top: 48px; padding-top: 24px; border-top: 2px solid rgba(245, 245, 240, 0.08); align-items: center; justify-content: space-between; gap: 16px;">
-        <button id="btn-prev-node" class="btn btn-outline" style="max-width: 48%; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;"></button>
-        <button id="btn-next-node" class="btn btn-primary" style="max-width: 48%; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;"></button>
+      <div class="node-navigation" id="node-navigation"
+        style="display:none; margin-top: 48px; padding-top: 24px; border-top: 2px solid rgba(245, 245, 240, 0.08); align-items: center; justify-content: space-between; gap: 16px;">
+        <button id="btn-prev-node" class="btn btn-outline"
+          style="max-width: 48%; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;"></button>
+        <button id="btn-next-node" class="btn btn-primary"
+          style="max-width: 48%; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;"></button>
       </div>
     </main>
   </div>

@@ -9,20 +9,19 @@
 
 document.addEventListener('DOMContentLoaded', () => {
   let page = window.location.pathname.split('/').pop() || '';
-  page = page.replace('.html', '').replace(/\?.*$/, '').trim();
-
+  page = page.replace('.html', '').replace(/\?.*$/, '').replace(/#.*$/, '').trim();
   /* eslint-disable no-undef */
   const PAGES = {
-    'index':             typeof PageIndex            !== 'undefined' ? PageIndex            : null,
-    '':                  typeof PageIndex            !== 'undefined' ? PageIndex            : null,
-    'login':             typeof PageLogin            !== 'undefined' ? PageLogin            : null,
-    'registro':          typeof PageRegistro         !== 'undefined' ? PageRegistro         : null,
-    'dashboard':         typeof PageDashboard        !== 'undefined' ? PageDashboard        : null,
-    'simulacros':        typeof PageSimulacros       !== 'undefined' ? PageSimulacros       : null,
-    'estadisticas':      typeof PageEstadisticas     !== 'undefined' ? PageEstadisticas     : null,
+    'index': typeof PageIndex !== 'undefined' ? PageIndex : null,
+    '': typeof PageIndex !== 'undefined' ? PageIndex : null,
+    'login': typeof PageLogin !== 'undefined' ? PageLogin : null,
+    'registro': typeof PageRegistro !== 'undefined' ? PageRegistro : null,
+    'dashboard': typeof PageDashboard !== 'undefined' ? PageDashboard : null,
+    'simulacros': typeof PageSimulacros !== 'undefined' ? PageSimulacros : null,
+    'estadisticas': typeof PageEstadisticas !== 'undefined' ? PageEstadisticas : null,
     'ciencias-sociales': typeof PageCienciasSociales !== 'undefined' ? PageCienciasSociales : null,
-    'nodo':              typeof PageNodo             !== 'undefined' ? PageNodo             : null,
-    'ranking':           { init() { /* RankingPage.init() is called by ranking.js */ } },
+    'nodo': typeof PageNodo !== 'undefined' ? PageNodo : null,
+    'ranking': { init() { /* RankingPage.init() is called by ranking.js */ } },
   };
   /* eslint-enable no-undef */
 

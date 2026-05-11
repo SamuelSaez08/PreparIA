@@ -19,7 +19,20 @@
       "Bash(node --check \"c:\\\\Users\\\\samue\\\\OneDrive\\\\Escritorio\\\\IAprepar\\\\IAprepar\\\\Backend\\\\src\\\\services\\\\ia.service.js\")",
       "Read(//mnt/c/Users/samue/OneDrive/Escritorio/IAprepar/IAprepar/**)",
       "Bash(node --check \"c:\\\\Users\\\\samue\\\\OneDrive\\\\Escritorio\\\\IAprepar\\\\IAprepar\\\\Backend\\\\src\\\\controllers\\\\ia.controller.js\")",
-      "Bash(node --check \"c:\\\\Users\\\\samue\\\\OneDrive\\\\Escritorio\\\\IAprepar\\\\IAprepar\\\\Backend\\\\src\\\\config\\\\gemini.js\")"
+      "Bash(node --check \"c:\\\\Users\\\\samue\\\\OneDrive\\\\Escritorio\\\\IAprepar\\\\IAprepar\\\\Backend\\\\src\\\\config\\\\gemini.js\")",
+      "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\samue\\\\OneDrive\\\\Escritorio\\\\IAprepar\" -Force)",
+      "Bash(Select-Object Name, FullName, PSIsContainer)",
+      "Bash(Format-Table -AutoSize)",
+      "PowerShell(Get-ChildItem -Path \"c:\\\\Users\\\\samue\\\\OneDrive\\\\Escritorio\\\\IAprepar\" -Force | Select-Object Name, @{Name=\"Type\"; Expression={if\\($_.PSIsContainer\\){\"DIR\"}else{\"FILE\"}}} | Format-Table -AutoSize)",
+      "PowerShell(Get-ChildItem -Path \"c:\\\\Users\\\\samue\\\\OneDrive\\\\Escritorio\\\\IAprepar\\\\IAprepar\" -Force | Select-Object Name, @{Name=\"Type\"; Expression={if\\($_.PSIsContainer\\){\"DIR\"}else{\"FILE\"}}} | Format-Table -AutoSize)",
+      "PowerShell(Get-ChildItem -Path \"c:\\\\Users\\\\samue\\\\OneDrive\\\\Escritorio\\\\IAprepar\\\\IAprepar\\\\Frontend\" -Force | Select-Object Name, @{Name=\"Type\"; Expression={if\\($_.PSIsContainer\\){\"DIR\"}else{\"FILE\"}}} | Format-Table -AutoSize)",
+      "PowerShell(Get-ChildItem -Path \"c:\\\\Users\\\\samue\\\\OneDrive\\\\Escritorio\\\\IAprepar\\\\IAprepar\\\\Frontend\\\\js\" -Recurse -Force | Select-Object Name, @{Name=\"Type\"; Expression={if\\($_.PSIsContainer\\){\"DIR\"}else{\"FILE\"}}} | Format-Table -AutoSize)",
+      "PowerShell(Get-ChildItem -Path \"c:\\\\Users\\\\samue\\\\OneDrive\\\\Escritorio\\\\IAprepar\\\\IAprepar\\\\Backend\" -Force | Select-Object Name, @{Name=\"Type\"; Expression={if\\($_.PSIsContainer\\){\"DIR\"}else{\"FILE\"}}} | Format-Table -AutoSize)",
+      "PowerShell(Get-ChildItem -Path \"c:\\\\Users\\\\samue\\\\OneDrive\\\\Escritorio\\\\IAprepar\\\\IAprepar\\\\Backend\\\\src\" -Recurse -Force | Select-Object Name, @{Name=\"Type\"; Expression={if\\($_.PSIsContainer\\){\"DIR\"}else{\"FILE\"}}} | Format-Table -AutoSize)",
+      "Bash(cd /c/Users/samue/OneDrive/Escritorio/IAprepar/IAprepar/Backend && find . -type f -name \"*route*\" | grep -iE \"\\(nodo|contenido\\)\" | head -20)",
+      "Read(//c/c/Users/samue/OneDrive/Escritorio/IAprepar/IAprepar/**)",
+      "Bash(cd /c/Users/samue/OneDrive\\\\Escritorio\\\\IAprepar\\\\IAprepar\\\\Backend && ls -la ./migrations/ | tail -10)",
+      "Read(//c/Users/samue/**)"
     ]
   }
 }

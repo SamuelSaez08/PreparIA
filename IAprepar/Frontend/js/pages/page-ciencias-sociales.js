@@ -104,9 +104,8 @@ const PageCienciasSociales = {
     header?.classList.toggle('open', isOpen);
     if (header) header.classList.add('node-selected');
   },
-
   showNodeContent(nodeId) {
-    window.location.href = `/nodo.html?id=${encodeURIComponent(nodeId)}`;
+    window.location.href = `${location.origin}/nodo.html#id=${encodeURIComponent(nodeId)}`;
   },
 
   expandAll() {

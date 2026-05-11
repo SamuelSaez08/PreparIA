@@ -10,13 +10,13 @@
 ────────────────────────────────────────────────────────── */
 const State = (() => {
   const KEYS = {
-    USER:        'preparia_user',
-    SESSION:     'preparia_session',
-    STREAK:      'preparia_streak',
-    SIMULACROS:  'preparia_simulacros',
-    PROGRESS:    'preparia_progress',
-    TREE_NODES:  'preparia_tree_nodes',
-    SETTINGS:    'preparia_settings',
+    USER: 'preparia_user',
+    SESSION: 'preparia_session',
+    STREAK: 'preparia_streak',
+    SIMULACROS: 'preparia_simulacros',
+    PROGRESS: 'preparia_progress',
+    TREE_NODES: 'preparia_tree_nodes',
+    SETTINGS: 'preparia_settings',
   };
 
   const get = (key) => {
@@ -82,13 +82,13 @@ const Streak = (() => {
     if (s.lastDate === today) return;
 
     const last = new Date(s.lastDate);
-    const now  = new Date(today);
+    const now = new Date(today);
     const diff = Math.round((now - last) / (1000 * 60 * 60 * 24));
 
     s.count = diff === 1 ? s.count + 1 : 1;
     s.lastDate = today;
-    s.history  = [...(s.history || []).slice(-29), today];
-    s.longest  = Math.max(s.longest || 0, s.count);
+    s.history = [...(s.history || []).slice(-29), today];
+    s.longest = Math.max(s.longest || 0, s.count);
     State.set(State.KEYS.STREAK, s);
   };
 
@@ -117,7 +117,7 @@ const Streak = (() => {
     if (!backendData) return;
     const current = get();
     const updated = {
-      count:   backendData.racha_actual || backendData.dias || current.count || 0,
+      count: backendData.racha_actual || backendData.dias || current.count || 0,
       lastDate: todayStr(),
       history: backendData.actividad_semanal || backendData.historial || current.history || [],
       longest: backendData.racha_maxima || backendData.mejor_racha || current.longest || 0,
@@ -153,9 +153,9 @@ const Simulacros = (() => {
     if (!history.length) return { avg: 0, best: 0, total: 0, lastPct: 0 };
     const pcts = history.map(h => h.pct);
     return {
-      avg:     Math.round(pcts.reduce((a, b) => a + b, 0) / pcts.length),
-      best:    Math.max(...pcts),
-      total:   history.length,
+      avg: Math.round(pcts.reduce((a, b) => a + b, 0) / pcts.length),
+      best: Math.max(...pcts),
+      total: history.length,
       lastPct: pcts[0] || 0,
     };
   };
@@ -183,13 +183,17 @@ const Simulacros = (() => {
 const TreeManager = (() => {
   const DEFAULT_TREE = [];
 
-  const transformBackendNode = (node) => ({
-    id: node.id || node.id_nodo,
-    label: node.nombre || node.label || 'Sin nombre',
-    icon: node.icono || node.icon || '📌',
-    description: node.descripcion || '',
-    children: (node.hijos || node.children || []).map(transformBackendNode),
-  });
+  const transformBackendNode = (node) => {
+    const rawIcon = node.icono || node.icon || '';
+    const icon = rawIcon && rawIcon.length <= 4 ? rawIcon : '📌';
+    return {
+      id: node.id || node.id_nodo,
+      label: node.nombre || node.label || 'Sin nombre',
+      icon,
+      description: node.descripcion || '',
+      children: (node.hijos || node.children || []).map(transformBackendNode),
+    };
+  };
 
   const getTree = () => State.get(State.KEYS.TREE_NODES) || DEFAULT_TREE;
 

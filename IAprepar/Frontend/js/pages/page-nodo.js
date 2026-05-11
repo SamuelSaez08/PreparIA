@@ -8,29 +8,38 @@ const PageNodo = {
 
     document.getElementById('logout-btn')?.addEventListener('click', () => Auth.logout());
 
-    const params = new URLSearchParams(window.location.search);
-    const nodeId = params.get('id');
+    const hash = window.location.hash.replace('#', '');
+    const hashParams = new URLSearchParams(hash);
+    const nodeId = hashParams.get('id') || new URLSearchParams(window.location.search).get('id');
+    console.log('[DEBUG nodo] URL:', window.location.href);
+    console.log('[DEBUG nodo] nodeId:', nodeId);
+    console.log('[DEBUG nodo] tree en localStorage:', TreeManager.getTree().length, 'nodos raíz');
 
     if (!nodeId) { window.location.href = 'ciencias-sociales.html'; return; }
 
     // Cargar árbol del backend solo si no está en localStorage
     if (!TreeManager.getTree().length) {
+      console.log('[DEBUG nodo] Árbol vacío, cargando del backend...');
       try {
         const res = await NodosAPI.getArbol(1);
         const datos = res.datos || res;
         const backendTree = Array.isArray(datos) ? datos : (datos.hijos || datos.nodos || [datos]);
         TreeManager.setTreeFromBackend(backendTree);
+        console.log('[DEBUG nodo] Árbol cargado del backend:', TreeManager.getTree().length, 'nodos raíz');
       } catch (err) {
-        console.warn('Could not load tree from backend:', err);
+        console.warn('[DEBUG nodo] Error cargando árbol del backend:', err);
       }
     }
 
     let node = TreeManager.getNodeById(nodeId);
+    console.log('[DEBUG nodo] getNodeById(' + nodeId + '):', node ? node.label : 'null - no encontrado');
 
     if (!node) {
+      console.log('[DEBUG nodo] Intentando getNodo individual...');
       try {
         const res = await NodosAPI.getNodo(nodeId);
         const raw = res.datos || res;
+        console.log('[DEBUG nodo] getNodo respuesta raw:', raw);
         node = {
           id: raw.id,
           label: raw.nombre || 'Sin nombre',
@@ -39,6 +48,7 @@ const PageNodo = {
           children: [],
         };
       } catch (err) {
+        console.error('[DEBUG nodo] getNodo falló:', err);
         this.showError('No se encontró el nodo solicitado.');
         return;
       }
@@ -70,7 +80,7 @@ const PageNodo = {
           <a href="ciencias-sociales.html" class="crumb">Ciencias Sociales</a>
           ${path.slice(0, -1).map(p => `
             <span class="crumb-sep">→</span>
-            <a href="nodo.html?id=${encodeURIComponent(p.id)}" class="crumb">${p.label}</a>
+            <a href="nodo.html#id=${encodeURIComponent(p.id)}" class="crumb">${p.label}</a>
           `).join('')}
           <span class="crumb-sep">→</span>
           <span class="crumb active">${node.label}</span>
@@ -112,38 +122,78 @@ const PageNodo = {
     const contentArea = document.getElementById('node-content-area');
     if (!contentArea) return;
 
-    try {
-      if (typeof node.id === 'number' || !isNaN(parseInt(nodeId))) {
-        const res = await NodosAPI.getMaterial(nodeId);
-        const materiales = res.datos || [];
+    const esNodoBackend = typeof node.id === 'number' || !isNaN(parseInt(nodeId));
+    console.log('[DEBUG loadContent] node.id:', node.id, typeof node.id, '| nodeId param:', nodeId, '| esNodoBackend:', esNodoBackend);
 
-        if (materiales.length > 0) {
-          contentArea.innerHTML = materiales.map(m => `
-            <div class="node-content-card">
-              ${m.titulo ? `<h4>${m.titulo}</h4>` : ''}
-              <div class="node-content-text">${this.formatContent(m.contenido)}</div>
-            </div>
-          `).join('');
+    if (!esNodoBackend) {
+      // Nodo local sin ID numérico
+      contentArea.innerHTML = node.description
+        ? `<div class="node-content-card"><div class="node-content-text">${this.formatContent(node.description)}</div></div>`
+        : this._emptyContent('Sin contenido disponible', 'Este es un nodo del árbol sin material asignado.');
+      return;
+    }
+
+    // Mostrar skeleton mientras carga
+    contentArea.innerHTML = `
+      <div class="node-content-card" style="opacity:0.4">
+        <div style="height:1rem;background:rgba(255,255,255,0.1);border-radius:4px;margin-bottom:12px;width:60%"></div>
+        <div style="height:0.8rem;background:rgba(255,255,255,0.07);border-radius:4px;margin-bottom:8px"></div>
+        <div style="height:0.8rem;background:rgba(255,255,255,0.07);border-radius:4px;margin-bottom:8px;width:80%"></div>
+        <div style="height:0.8rem;background:rgba(255,255,255,0.07);border-radius:4px;width:90%"></div>
+      </div>`;
+
+    try {
+      const res = await NodosAPI.getMaterial(nodeId);
+      console.log('[DEBUG loadContent] respuesta getMaterial:', res);
+
+      const materiales = (res && res.datos) ? res.datos : [];
+      console.log('[DEBUG loadContent] materiales.length:', materiales.length);
+
+      if (materiales.length === 0) {
+        const hasChildren = node.children && node.children.length > 0;
+        if (hasChildren) {
+          contentArea.innerHTML = ''; // los hijos se renderizan abajo en renderChildren
         } else if (node.description) {
-          contentArea.innerHTML = `
-            <div class="node-content-card">
-              <div class="node-content-text">${this.formatContent(node.description)}</div>
-            </div>`;
+          contentArea.innerHTML = `<div class="node-content-card"><div class="node-content-text">${this.formatContent(node.description)}</div></div>`;
         } else {
           contentArea.innerHTML = this._emptyContent('Sin contenido disponible', 'Este nodo aún no tiene material de estudio asignado.');
         }
-      } else {
-        if (node.description) {
-          contentArea.innerHTML = `
-            <div class="node-content-card">
-              <div class="node-content-text">${this.formatContent(node.description)}</div>
-            </div>`;
-        } else {
-          contentArea.innerHTML = this._emptyContent('Sin contenido disponible', 'Este es un nodo del árbol sin material asignado.');
-        }
+        return;
       }
+
+      // Separar por tipo
+      const teoria = materiales.find(m => m.tipo === 'teoria');
+      const ejemplo = materiales.find(m => m.tipo === 'ejemplo');
+      const tip = materiales.find(m => m.tipo === 'tip_icfes');
+
+      contentArea.innerHTML = `
+        ${teoria ? `
+          <div class="node-content-card">
+            <h4 style="margin-bottom:12px;font-size:1rem;color:var(--accent)">
+              📖 ${Utils.sanitizeHTML(teoria.titulo || 'Teoría')}
+            </h4>
+            <div class="node-content-text">${this.formatContent(teoria.contenido)}</div>
+          </div>` : ''}
+
+        ${ejemplo ? `
+          <div class="node-content-card" style="border-left:3px solid var(--accent)">
+            <h4 style="margin-bottom:12px;font-size:1rem;color:var(--accent)">
+              💡 ${Utils.sanitizeHTML(ejemplo.titulo || 'Ejemplo')}
+            </h4>
+            <div class="node-content-text">${this.formatContent(ejemplo.contenido)}</div>
+          </div>` : ''}
+
+        ${tip ? `
+          <div class="node-content-card" style="border-left:3px solid var(--coral);background:rgba(255,107,79,0.06)">
+            <h4 style="margin-bottom:12px;font-size:1rem;color:var(--coral)">
+              🎯 ${Utils.sanitizeHTML(tip.titulo || 'Cómo pregunta el ICFES')}
+            </h4>
+            <div class="node-content-text">${this.formatContent(tip.contenido)}</div>
+          </div>` : ''}
+      `;
+
     } catch (err) {
-      console.error('Error loading node content:', err);
+      console.error('[DEBUG loadContent] Error:', err);
       contentArea.innerHTML = `
         <div class="node-empty">
           <div class="empty-icon">⚠️</div>
@@ -179,7 +229,7 @@ const PageNodo = {
     list.innerHTML = node.children.map(child => {
       const hasGrandchildren = child.children && child.children.length > 0;
       return `
-        <a href="nodo.html?id=${encodeURIComponent(child.id)}" class="node-child-item">
+        <a href="nodo.html#id=${encodeURIComponent(child.id)}" class="node-child-item">
           <div class="node-child-icon">${child.icon || '📌'}</div>
           <div>
             <div class="node-child-label">${child.label}</div>
@@ -234,7 +284,7 @@ const PageNodo = {
       const prev = flat[idx - 1];
       btnPrev.style.visibility = 'visible';
       btnPrev.innerHTML = `← ${Utils.sanitizeHTML(prev.label)}`;
-      btnPrev.onclick = () => window.location.href = `nodo.html?id=${encodeURIComponent(prev.id)}`;
+      btnPrev.onclick = () => window.location.href = `nodo.html#id=${encodeURIComponent(prev.id)}`;
     } else {
       btnPrev.style.visibility = 'hidden';
     }
@@ -243,7 +293,7 @@ const PageNodo = {
       const next = flat[idx + 1];
       btnNext.style.visibility = 'visible';
       btnNext.innerHTML = `${Utils.sanitizeHTML(next.label)} →`;
-      btnNext.onclick = () => window.location.href = `nodo.html?id=${encodeURIComponent(next.id)}`;
+      btnNext.onclick = () => window.location.href = `nodo.html#id=${encodeURIComponent(next.id)}`;
     } else {
       btnNext.style.visibility = 'hidden';
     }
