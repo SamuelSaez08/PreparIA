@@ -1,0 +1,27 @@
+# Variables de entorno — NUNCA commitear
+.env
+.env.local
+.env.production
+.env.staging
+*.env
+
+# Archivos de depuración con credenciales
+debug_db.js
+debug_*.js
+
+# Dependencias
+node_modules/
+**/node_modules/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# Build
+dist/
+build/
+
+# OS
+.DS_Store
+Thumbs.db

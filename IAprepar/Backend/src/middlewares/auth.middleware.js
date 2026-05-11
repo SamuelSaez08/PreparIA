@@ -5,7 +5,8 @@ const logger = require('../utils/logger');
 const { fail } = require('../utils/response');
 const { ROLES } = require('../utils/constants');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'preparia_secret_dev';
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) throw new Error('JWT_SECRET no configurado. Revisa tu archivo .env');
 
 /** Middleware: verificar JWT en header Authorization */
 const authenticate = (req, res, next) => {

@@ -1,10 +1,11 @@
+require('dotenv').config({ path: require('path').resolve(__dirname, '../.env') });
 const { Pool } = require('pg');
 const pool = new Pool({
-  user: 'prepar_user',
-  password: '2005',
-  host: 'localhost',
-  database: 'PreparIA',
-  port: 5432
+  host:     process.env.PGHOST     || 'localhost',
+  port:     parseInt(process.env.PGPORT || '5432', 10),
+  database: process.env.PGDATABASE || 'PreparIA',
+  user:     process.env.PGUSER,
+  password: process.env.PGPASSWORD,
 });
 
 const sql = `

@@ -7,11 +7,11 @@ module.exports = {
   development: {
     client: 'pg',
     connection: {
-      host:     process.env.PGHOST     || 'aws-1-us-west-2.pooler.supabase.com',
+      host:     process.env.PGHOST,
       port:     parseInt(process.env.PGPORT || '6543', 10),
-      database: process.env.PGDATABASE || 'postgres',
-      user:     process.env.PGUSER     || 'postgres.eajateyhrufsggshxppq',
-      password: process.env.PGPASSWORD || 'SamUeL#2005SaEz',
+      database: process.env.PGDATABASE,
+      user:     process.env.PGUSER,
+      password: process.env.PGPASSWORD,
       ssl:      { rejectUnauthorized: false },
     },
     migrations: {

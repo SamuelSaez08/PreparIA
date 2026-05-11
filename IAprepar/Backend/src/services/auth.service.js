@@ -7,7 +7,8 @@ const db      = require('../config/db');
 const logger  = require('../utils/logger');
 const usuarioRepo = require('../repositories/usuario.repo');
 
-const JWT_SECRET      = process.env.JWT_SECRET       || 'preparia_secret_dev';
+const JWT_SECRET      = process.env.JWT_SECRET;
+if (!JWT_SECRET) throw new Error('JWT_SECRET no configurado. Revisa tu archivo .env');
 const JWT_EXPIRES_IN  = process.env.JWT_EXPIRES_IN   || '8h';
 const SALT_ROUNDS     = parseInt(process.env.BCRYPT_SALT_ROUNDS || '12', 10);
 

@@ -9,6 +9,10 @@ logs/
 *.log
 npm-debug.log*
 
+# Archivos de depuración con credenciales
+debug_db.js
+debug_*.js
+
 # Archivos del sistema operativo
 .DS_Store
 Thumbs.db
