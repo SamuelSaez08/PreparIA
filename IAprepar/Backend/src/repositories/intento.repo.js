@@ -31,7 +31,10 @@ const upsertRespuesta = (idIntento, idPregunta, idOpcion, esCorrecta) =>
 
 const getStats = (client, idIntento) =>
   client.query(
-    `SELECT COUNT(*) AS total_respondidas, COUNT(*) FILTER (WHERE es_correcta) AS correctas, COUNT(*) FILTER (WHERE NOT es_correcta) AS incorrectas
+    `SELECT
+       COUNT(*)                              AS total_respondidas,
+       COUNT(*) FILTER (WHERE es_correcta)  AS correctas,
+       COUNT(*) FILTER (WHERE NOT es_correcta) AS incorrectas
      FROM respuesta_intento WHERE id_intento = $1`,
     [idIntento]
   );
@@ -45,20 +48,64 @@ const updateFinalizado = (client, idIntento, estado, puntaje, correctas, incorre
     [estado, puntaje, correctas, incorrectas, idIntento, tiempoUsado]
   );
 
+// ─────────────────────────────────────────────────────────────────────────────
+// getRetroalimentacion
+//
+// Cambios respecto a la versión anterior:
+//   + n.nombre  AS competencia        → para analizarFallos (agrupación por competencia)
+//   + p.tema                          → para analizarFallos (agrupación por tema)
+//   + co.letra  AS respuesta_correcta → para analizarFallos (comparar con letra_elegida)
+//   + oc.letra  AS letra_elegida      → para analizarFallos (identificar el distractor)
+//
+// El resto de la query es idéntico al original.
+// ─────────────────────────────────────────────────────────────────────────────
 const getRetroalimentacion = (client, idIntento) =>
   client.query(
-    `SELECT p.id AS id_pregunta, p.enunciado, p.texto_base, p.explicacion,
-            ri.id_opcion_elegida, ri.es_correcta,
-            oc.texto AS opcion_elegida_texto,
-            co.id AS id_opcion_correcta, co.texto AS opcion_correcta_texto,
-            json_agg(json_build_object('id',o.id,'texto',o.texto,'letra',o.letra,'es_correcta',o.es_correcta) ORDER BY o.letra) AS opciones
+    `SELECT
+       p.id            AS id_pregunta,
+       p.enunciado,
+       p.texto_base,
+       p.explicacion,
+       p.tema,
+
+       -- Competencia ICFES desde la tabla nivel (pensamiento_social, etc.)
+       n.nombre        AS competencia,
+       p.dificultad    AS nivel_dificultad,
+
+       -- Respuesta del usuario
+       ri.id_opcion_elegida,
+       ri.es_correcta,
+       oc.letra        AS letra_elegida,
+       oc.texto        AS opcion_elegida_texto,
+
+       -- Opción correcta
+       co.id           AS id_opcion_correcta,
+       co.letra        AS respuesta_correcta,
+       co.texto        AS opcion_correcta_texto,
+
+       -- Todas las opciones de la pregunta (para mostrar en el frontend)
+       json_agg(
+         json_build_object(
+           'id',         o.id,
+           'letra',      o.letra,
+           'texto',      o.texto,
+           'es_correcta', o.es_correcta
+         ) ORDER BY o.letra
+       ) AS opciones
+
      FROM respuesta_intento ri
-     JOIN pregunta p ON p.id = ri.id_pregunta
-     JOIN opcion_respuesta oc ON oc.id = ri.id_opcion_elegida
-     JOIN opcion_respuesta co ON co.id_pregunta = p.id AND co.es_correcta = true
-     JOIN opcion_respuesta o ON o.id_pregunta = p.id
+     JOIN pregunta          p  ON p.id  = ri.id_pregunta
+     LEFT JOIN nivel        n  ON n.id  = p.id_nivel
+     JOIN opcion_respuesta  oc ON oc.id = ri.id_opcion_elegida
+     JOIN opcion_respuesta  co ON co.id_pregunta = p.id AND co.es_correcta = true
+     JOIN opcion_respuesta  o  ON o.id_pregunta  = p.id
      WHERE ri.id_intento = $1
-     GROUP BY p.id, p.enunciado, p.texto_base, p.explicacion, ri.id_opcion_elegida, ri.es_correcta, oc.texto, co.id, co.texto
+     GROUP BY
+       p.id, p.enunciado, p.texto_base, p.explicacion, p.tema, p.dificultad,
+       n.nombre,
+       ri.id_opcion_elegida, ri.es_correcta,
+       oc.letra, oc.texto,
+       co.id, co.letra, co.texto
      ORDER BY p.id`,
     [idIntento]
   );

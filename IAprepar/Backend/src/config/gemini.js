@@ -13,8 +13,8 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || 'dummy_key');
  * Retorna el modelo de Gemini configurado con los parámetros estrictos
  * para generación de JSON y sin filtros de seguridad.
  */
-const getModel = () => {
-  const modelName = process.env.GEMINI_MODEL || 'gemini-1.5-flash';
+const getModel = (modelOverride = null) => {
+  const modelName = modelOverride || process.env.GEMINI_MODEL || 'gemini-1.5-flash';
   const is25 = modelName.includes('gemini-2.5');
 
   // gemini-2.5-x no acepta topK/topP y requiere thinkingConfig para deshabilitar thinking
@@ -53,6 +53,16 @@ const getModel = () => {
   });
 };
 
+const MODELOS_FALLBACK = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-2.5-flash-lite'];
+
+const getModelConFallback = () => {
+  const modeloPrincipal = process.env.GEMINI_MODEL || 'gemini-1.5-flash';
+  return [
+    modeloPrincipal,
+    ...MODELOS_FALLBACK.filter(m => m !== modeloPrincipal)
+  ];
+};
+
 /**
  * Verifica la conexión enviando un prompt súper corto
  */
@@ -70,4 +80,4 @@ const testConnection = async () => {
   }
 };
 
-module.exports = { getModel, testConnection };
+module.exports = { getModel, getModelConFallback, testConnection };

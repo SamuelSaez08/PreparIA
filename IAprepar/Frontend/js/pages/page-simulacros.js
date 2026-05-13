@@ -324,10 +324,11 @@ const PageSimulacros = {
       const res   = await SimulacrosAPI.finalizarIntento(s.intentoId, timeUsed);
       const datos = res.datos || res;
 
-      const correctas        = datos.correctas || datos.aciertos || 0;
-      const total            = datos.total_preguntas || datos.total || s.questions.length;
-      const pct              = datos.porcentaje || Math.round((correctas / total) * 100);
+      const correctas         = datos.correctas || datos.aciertos || 0;
+      const total             = datos.total_preguntas || datos.total || s.questions.length;
+      const pct               = datos.porcentaje || Math.round((correctas / total) * 100);
       const retroalimentacion = datos.retroalimentacion || datos.revisiones || datos.respuestas || [];
+      const analisis          = datos.analisis || null;
 
       Simulacros.saveResult({ score: correctas, total, timeUsed, pct });
 
@@ -346,7 +347,7 @@ const PageSimulacros = {
         <div class="muted mt-sm">Tiempo: ${Utils.formatTime(timeUsed)}</div>
       `;
 
-      this.renderReview(retroalimentacion);
+      this.renderReview(retroalimentacion, analisis, { correctas, total, timeUsed, pct });
 
     } catch (err) {
       console.error('Error finalizing simulacro:', err);
@@ -373,69 +374,235 @@ const PageSimulacros = {
         <div class="muted mt-sm">Tiempo: ${Utils.formatTime(timeUsed)}</div>
       `;
 
-      this.renderReview([]);
+      this.renderReview([], null, { correctas: correct, total: s.questions.length, timeUsed, pct });
     }
   },
 
-  renderReview(retroalimentacion = []) {
+  renderReview(retroalimentacion = [], analisis = null, stats = null) {
+    this._renderStatsRow(stats);
+    if (analisis) {
+      this._renderAnalisisDetails(analisis);
+    }
+    const fbp = analisis ? (analisis.feedback_por_pregunta || []) : retroalimentacion;
+    this._renderAccordion(fbp, !!analisis);
+  },
+
+  _renderStatsRow(stats) {
+    if (!stats) return;
+    const el = document.getElementById('result-stats-row');
+    if (!el) return;
+    const incorrectas = (stats.total || 0) - (stats.correctas || 0);
+    el.innerHTML = `
+      <div class="result-stat">
+        <div class="stat-val" style="color:var(--acid)">${stats.correctas}</div>
+        <div class="stat-lbl">Correctas</div>
+      </div>
+      <div class="result-stat">
+        <div class="stat-val" style="color:var(--coral)">${incorrectas}</div>
+        <div class="stat-lbl">Incorrectas</div>
+      </div>
+      <div class="result-stat">
+        <div class="stat-val" style="color:var(--sky)">${Utils.formatTime(stats.timeUsed || 0)}</div>
+        <div class="stat-lbl">Tiempo</div>
+      </div>
+    `;
+  },
+
+  _renderAnalisisDetails(analisis) {
+    const af = analisis.analisis_final || {};
+
+    const mensajeEl = document.getElementById('result-mensaje');
+    if (mensajeEl && af.mensaje_general) {
+      mensajeEl.textContent = af.mensaje_general;
+    }
+
+    const comps = (af.por_competencia || [])
+      .filter(c => c.total > 0)
+      .sort((a, b) => a.porcentaje - b.porcentaje);
+    if (comps.length) {
+      const sec = document.getElementById('section-competencias');
+      const con = document.getElementById('competencias-container');
+      if (sec) sec.style.display = '';
+      if (con) con.innerHTML = comps.map(c => this._barCard(c)).join('');
+      setTimeout(() => this._animateBars('competencias-container'), 150);
+    }
+
+    const temas = (af.por_tema || [])
+      .filter(t => t.total > 0)
+      .sort((a, b) => a.porcentaje - b.porcentaje);
+    if (temas.length) {
+      const sec = document.getElementById('section-temas');
+      const con = document.getElementById('temas-container');
+      if (sec) sec.style.display = '';
+      if (con) con.innerHTML = temas.map(t => this._barCard(t)).join('');
+      setTimeout(() => this._animateBars('temas-container'), 300);
+    }
+
+    const recos = af.recomendaciones || [];
+    if (recos.length) {
+      const sec = document.getElementById('section-recomendaciones');
+      const con = document.getElementById('recomendaciones-container');
+      if (sec) sec.style.display = '';
+      if (con) con.innerHTML = recos.map(r => `
+        <div class="reco-card">
+          <div class="reco-card-header">
+            <div class="reco-card-icon">💡</div>
+            <div>
+              <div class="reco-card-name">${Utils.sanitizeHTML(r.nombre || '')}</div>
+              <div class="reco-card-tip">${Utils.sanitizeHTML(r.tip || '')}</div>
+            </div>
+          </div>
+        </div>
+      `).join('');
+    }
+  },
+
+  _barCard(item) {
+    const NIVELES = ['dominas', 'en_proceso', 'necesita_refuerzo'];
+    const nivel   = NIVELES.includes(item.nivel) ? item.nivel : 'en_proceso';
+    const labels  = { dominas: 'Dominas', en_proceso: 'En proceso', necesita_refuerzo: 'Necesita refuerzo' };
+    const pbClass = item.porcentaje >= 80 ? 'pb-green' : item.porcentaje >= 60 ? 'pb-yellow' : 'pb-red';
+    const name    = item.nombre || item.tema || '';
+    return `
+      <div class="analisis-card">
+        <div class="analisis-card-header">
+          <div>
+            <div class="analisis-card-name">${Utils.sanitizeHTML(name)}</div>
+            <div class="analisis-card-stats">${item.correctas} / ${item.total} correctas</div>
+          </div>
+          <span class="nivel-badge nivel-${nivel}">${labels[nivel]}</span>
+        </div>
+        <div class="progress-track">
+          <div class="progress-bar-fill ${pbClass}" data-target="${item.porcentaje}" style="width:0%"></div>
+        </div>
+        <div style="text-align:right;font-size:0.75rem;margin-top:4px;color:rgba(245,245,240,0.4)">${item.porcentaje}%</div>
+      </div>
+    `;
+  },
+
+  _animateBars(containerId) {
+    const con = document.getElementById(containerId);
+    if (!con) return;
+    con.querySelectorAll('.progress-bar-fill[data-target]').forEach(bar => {
+      bar.style.width = bar.dataset.target + '%';
+    });
+  },
+
+  _renderAccordion(items, isAnalisis) {
     const s         = this.state;
     const container = document.getElementById('review-container');
     if (!container) return;
 
-    if (retroalimentacion.length) {
-      container.innerHTML = retroalimentacion.map((r, qi) => {
-        const pregunta   = r.enunciado || r.pregunta || r.texto || `Pregunta ${qi + 1}`;
-        const isCorrect  = r.es_correcta || r.correcta || false;
-        const opciones   = r.opciones || [];
-        const explicacion = r.explicacion || r.retroalimentacion || '';
-        const textoBase  = r.texto_base ?? r.contexto ?? '';
-
-        return `
-          <div class="question-card no-hover" style="margin-bottom:16px">
-            <div class="question-number">Pregunta ${qi + 1} · ${isCorrect ? '✅ Correcta' : '❌ Incorrecta'}</div>
-            ${textoBase ? `<div class="question-context">${Utils.sanitizeHTML(textoBase)}</div>` : ''}
-            <div class="question-text">${Utils.sanitizeHTML(pregunta)}</div>
-            ${opciones.length ? `
-              <div class="options-list">
-                ${opciones.map((opt, i) => {
-                  const esCorrecta     = opt.es_correcta || false;
-                  const fueSeleccionada = opt.seleccionada || false;
-                  return `
-                    <div class="option-item ${esCorrecta ? 'correct' : ''} ${fueSeleccionada && !esCorrecta ? 'wrong' : ''}">
-                      <div class="option-letter">${String.fromCharCode(65 + i)}</div>
-                      <div>${Utils.sanitizeHTML(opt.texto || opt.text || opt.contenido)}</div>
-                    </div>
-                  `;
-                }).join('')}
+    if (!items || !items.length) {
+      if (!isAnalisis) {
+        container.innerHTML = s.questions.map((q, i) => {
+          const userAns = s.answers[q.id];
+          const short   = q.text.length > 72 ? q.text.substring(0, 72) + '…' : q.text;
+          return `
+            <div class="accordion-item" id="acc-${i}">
+              <button class="accordion-trigger" onclick="PageSimulacros.toggleAccordion(${i})" aria-expanded="false">
+                <span class="accordion-icon">📝</span>
+                <span class="accordion-label">Pregunta ${i + 1} · ${Utils.sanitizeHTML(short)}</span>
+                <span class="accordion-arrow">▼</span>
+              </button>
+              <div class="accordion-body">
+                <div class="options-list">
+                  ${q.options.map((opt, oi) => {
+                    const text = typeof opt === 'string' ? opt : opt.text;
+                    return `<div class="option-item ${oi === userAns ? 'selected' : ''}">
+                      <div class="option-letter">${String.fromCharCode(65 + oi)}</div>
+                      <div>${Utils.sanitizeHTML(text)}</div>
+                    </div>`;
+                  }).join('')}
+                </div>
               </div>
-            ` : ''}
-            ${!isCorrect && explicacion ? `<div class="alert alert-info mt-md">💡 ${Utils.sanitizeHTML(explicacion)}</div>` : ''}
-          </div>
-        `;
-      }).join('');
-    } else {
-      container.innerHTML = s.questions.map((q, qi) => {
-        const userAns = s.answers[q.id];
-        return `
-          <div class="question-card no-hover" style="margin-bottom:16px">
-            <div class="question-number">Pregunta ${qi + 1} · ${Utils.sanitizeHTML(q.tema)}</div>
-            ${q.texto_base ? `<div class="question-context">${Utils.sanitizeHTML(q.texto_base)}</div>` : ''}
-            <div class="question-text">${Utils.sanitizeHTML(q.text)}</div>
-            <div class="options-list">
-              ${q.options.map((opt, i) => {
-                const text = typeof opt === 'string' ? opt : opt.text;
-                return `
-                  <div class="option-item ${i === userAns ? 'selected' : ''}">
-                    <div class="option-letter">${String.fromCharCode(65 + i)}</div>
-                    <div>${Utils.sanitizeHTML(text)}</div>
-                  </div>
-                `;
-              }).join('')}
+            </div>
+          `;
+        }).join('');
+      } else {
+        container.innerHTML = '<p style="color:rgba(245,245,240,0.35);text-align:center;padding:20px">No hay revisión detallada disponible.</p>';
+      }
+      return;
+    }
+
+    const sorted = isAnalisis
+      ? [...items.filter(p => !p.es_correcta), ...items.filter(p => p.es_correcta)]
+      : [...items.filter(p => !(p.es_correcta || p.correcta)), ...items.filter(p => p.es_correcta || p.correcta)];
+
+    container.innerHTML = sorted.map((p, i) => {
+      const isOk = p.es_correcta || p.correcta || false;
+
+      if (isAnalisis) {
+        const qState = s.questions.find(q => q.id === p.id_pregunta);
+        const enunciado = qState ? qState.text : `Pregunta ${p.id_pregunta}`;
+        const short = enunciado.length > 75 ? enunciado.substring(0, 75) + '…' : enunciado;
+        const body = isOk ? `
+          <p style="color:rgba(191,255,0,0.85);font-size:0.88rem;margin-bottom:8px">✓ Respondiste correctamente.</p>
+          ${p.concepto_clave ? `<span class="concepto-badge">📌 ${Utils.sanitizeHTML(p.concepto_clave)}</span><br>` : ''}
+          ${p.explicacion_completa ? `<div class="explicacion-block">${Utils.sanitizeHTML(p.explicacion_completa)}</div>` : ''}
+        ` : `
+          <div class="answer-comparison">
+            <div class="answer-box wrong-ans">
+              <div class="ans-label">Tu respuesta${p.letra_elegida ? ` (${p.letra_elegida})` : ''}</div>
+              <div>${Utils.sanitizeHTML(p.texto_elegido || '—')}</div>
+            </div>
+            <div class="answer-box right-ans">
+              <div class="ans-label">Respuesta correcta${p.letra_correcta ? ` (${p.letra_correcta})` : ''}</div>
+              <div>${Utils.sanitizeHTML(p.texto_correcto || '—')}</div>
             </div>
           </div>
+          ${p.error_conceptual ? `<span class="error-badge">⚠ ${Utils.sanitizeHTML(p.error_conceptual)}</span><br>` : ''}
+          ${p.concepto_clave ? `<span class="concepto-badge">📌 ${Utils.sanitizeHTML(p.concepto_clave)}</span><br>` : ''}
+          ${p.explicacion_completa ? `<div class="explicacion-block">${Utils.sanitizeHTML(p.explicacion_completa)}</div>` : ''}
         `;
-      }).join('');
-    }
+        return `
+          <div class="accordion-item ${isOk ? 'correct' : 'incorrect'}" id="acc-${i}">
+            <button class="accordion-trigger" onclick="PageSimulacros.toggleAccordion(${i})" aria-expanded="false">
+              <span class="accordion-icon">${isOk ? '✅' : '❌'}</span>
+              <span class="accordion-label">${Utils.sanitizeHTML(short)}</span>
+              <span class="accordion-arrow">▼</span>
+            </button>
+            <div class="accordion-body">${body}</div>
+          </div>
+        `;
+      }
+
+      const pregunta     = p.enunciado || p.pregunta || p.texto || `Pregunta ${i + 1}`;
+      const preguntaShort = pregunta.length > 75 ? pregunta.substring(0, 75) + '…' : pregunta;
+      const opciones     = p.opciones || [];
+      const explicacion  = p.explicacion || p.retroalimentacion || '';
+      const textoBase    = p.texto_base ?? p.contexto ?? '';
+      return `
+        <div class="accordion-item ${isOk ? 'correct' : 'incorrect'}" id="acc-${i}">
+          <button class="accordion-trigger" onclick="PageSimulacros.toggleAccordion(${i})" aria-expanded="false">
+            <span class="accordion-icon">${isOk ? '✅' : '❌'}</span>
+            <span class="accordion-label">${Utils.sanitizeHTML(preguntaShort)}</span>
+            <span class="accordion-arrow">▼</span>
+          </button>
+          <div class="accordion-body">
+            ${textoBase ? `<div class="question-context" style="margin-bottom:10px">${Utils.sanitizeHTML(textoBase)}</div>` : ''}
+            <div style="font-size:0.9rem;margin-bottom:10px;color:rgba(245,245,240,0.85)">${Utils.sanitizeHTML(pregunta)}</div>
+            ${opciones.length ? `<div class="options-list">
+              ${opciones.map((opt, oi) => `
+                <div class="option-item ${opt.es_correcta ? 'correct' : ''} ${opt.seleccionada && !opt.es_correcta ? 'wrong' : ''}">
+                  <div class="option-letter">${String.fromCharCode(65 + oi)}</div>
+                  <div>${Utils.sanitizeHTML(opt.texto || opt.text || opt.contenido || '')}</div>
+                </div>`).join('')}
+            </div>` : ''}
+            ${!isOk && explicacion ? `<div class="alert alert-info mt-md">💡 ${Utils.sanitizeHTML(explicacion)}</div>` : ''}
+          </div>
+        </div>
+      `;
+    }).join('');
+  },
+
+  toggleAccordion(index) {
+    const item = document.getElementById(`acc-${index}`);
+    if (!item) return;
+    const isOpen = item.classList.contains('open');
+    item.classList.toggle('open', !isOpen);
+    const trigger = item.querySelector('.accordion-trigger');
+    if (trigger) trigger.setAttribute('aria-expanded', String(!isOpen));
   },
 
   renderHistory() {

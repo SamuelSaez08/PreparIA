@@ -50,7 +50,11 @@
       "Bash(grep -E \"\\\\.env$\")",
       "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\samue\\\\OneDrive\\\\Escritorio\\\\IAprepar\\\\IAprepar\\\\Backend\\\\src\" -Recurse -Filter \"*.js\")",
       "Bash(Select-Object -ExpandProperty FullName)",
-      "Bash(dir \"c:\\\\Users\\\\samue\\\\OneDrive\\\\Escritorio\\\\IAprepar\\\\IAprepar\\\\Frontend\")"
+      "Bash(dir \"c:\\\\Users\\\\samue\\\\OneDrive\\\\Escritorio\\\\IAprepar\\\\IAprepar\\\\Frontend\")",
+      "Bash(pm2 logs *)",
+      "PowerShell(pm2 logs --lines 50 2>&1)",
+      "PowerShell(npx pm2 logs --lines 50 2>&1)",
+      "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\samue\\\\OneDrive\\\\Escritorio\\\\IAprepar\" -Recurse -Directory -Filter \"*migration*\" -ErrorAction SilentlyContinue)"
     ]
   }
 }
