@@ -8,10 +8,15 @@ console.log('DATABASE_URL exists:', !!process.env.DATABASE_URL);
 
 try {
   console.log('Corriendo migraciones...');
-  execSync('npx knex migrate:latest', { stdio: 'inherit' });
+  const output = execSync('npx knex migrate:latest', { 
+    encoding: 'utf8',
+    stderr: 'pipe'
+  });
+  console.log(output);
   console.log('Migraciones completadas.');
 } catch (err) {
-  console.error('Error en migraciones:', err.message);
+  console.error('STDOUT:', err.stdout);
+  console.error('STDERR:', err.stderr);
   process.exit(1);
 }
 
