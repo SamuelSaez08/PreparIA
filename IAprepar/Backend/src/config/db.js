@@ -3,23 +3,16 @@
 const { Pool } = require('pg');
 const logger   = require('../utils/logger');
 
-const _required = ['PGHOST', 'PGUSER', 'PGPASSWORD', 'PGDATABASE'];
-for (const key of _required) {
-  if (!process.env[key]) {
-    throw new Error(`Variable de entorno faltante: ${key}. Revisa tu archivo .env`);
-  }
+if (!process.env.DATABASE_URL) {
+  throw new Error('Variable de entorno faltante: DATABASE_URL. Revisa tu archivo .env');
 }
 
 const pool = new Pool({
-  host:               process.env.PGHOST,
-  port:               parseInt(process.env.PGPORT || '6543', 10),
-  database:           process.env.PGDATABASE,
-  user:               process.env.PGUSER,
-  password:           process.env.PGPASSWORD,
-  ssl:                { rejectUnauthorized: false },
-  max:                parseInt(process.env.PG_MAX_POOL || '10', 10),
-  idleTimeoutMillis:  parseInt(process.env.PG_IDLE_TIMEOUT || '30000', 10),
-  connectionTimeoutMillis: parseInt(process.env.PG_CONNECTION_TIMEOUT || '10000', 10),
+  connectionString:            process.env.DATABASE_URL,
+  ssl:                         process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+  max:                         parseInt(process.env.PG_MAX_POOL || '10', 10),
+  idleTimeoutMillis:           parseInt(process.env.PG_IDLE_TIMEOUT || '30000', 10),
+  connectionTimeoutMillis:     parseInt(process.env.PG_CONNECTION_TIMEOUT || '10000', 10),
 });
 
 pool.on('connect', () => logger.debug('Nueva conexión establecida con PostgreSQL'));

@@ -1,5 +1,12 @@
 # Variables de entorno — NUNCA commitear
 .env
+
+# Scripts sensibles
+inject_log.js
+reset_db.js
+seed_users.js
+test_db.js
+test_prompt.js
 .env.local
 .env.production
 .env.staging

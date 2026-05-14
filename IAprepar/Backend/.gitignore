@@ -4,6 +4,13 @@ node_modules/
 # Variables de entorno — NUNCA subir al repositorio
 .env
 
+# Scripts sensibles
+inject_log.js
+reset_db.js
+seed_users.js
+test_db.js
+test_prompt.js
+
 # Logs
 logs/
 *.log
