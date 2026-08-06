@@ -3,7 +3,7 @@ const db = require('../config/db');
 
 const findArbolByMateria = (idMateria) =>
   db.query(
-    `SELECT id, nombre, descripcion AS icono, id_padre, id_nivel, orden
+    `SELECT id, nombre, descripcion, id_padre, id_nivel, orden
      FROM nodo_aprendizaje
      WHERE id_materia = $1 AND activo = true
      ORDER BY id_nivel, orden, nombre`,

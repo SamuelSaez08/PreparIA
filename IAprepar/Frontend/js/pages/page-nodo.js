@@ -8,18 +8,27 @@ const PageNodo = {
 
     document.getElementById('logout-btn')?.addEventListener('click', () => Auth.logout());
 
-    const hash = window.location.hash.replace('#', '');
-    const hashParams = new URLSearchParams(hash);
-    const nodeId = hashParams.get('id') || new URLSearchParams(window.location.search).get('id');
+    const rawHash = window.location.hash.replace('#', '').trim();
+    let nodeId = null;
+    if (rawHash) {
+      if (rawHash.includes('=')) {
+        nodeId = new URLSearchParams(rawHash).get('id');
+      } else {
+        nodeId = rawHash;
+      }
+    }
+    if (!nodeId) {
+      nodeId = new URLSearchParams(window.location.search).get('id');
+    }
+
     console.log('[DEBUG nodo] URL:', window.location.href);
     console.log('[DEBUG nodo] nodeId:', nodeId);
-    console.log('[DEBUG nodo] tree en localStorage:', TreeManager.getTree().length, 'nodos raíz');
 
     if (!nodeId) { window.location.href = 'ciencias-sociales.html'; return; }
 
-    // Cargar árbol del backend solo si no está en localStorage
+    // Cargar árbol del backend si no está cargado o si es la primera entrada
     if (!TreeManager.getTree().length) {
-      console.log('[DEBUG nodo] Árbol vacío, cargando del backend...');
+      console.log('[DEBUG nodo] Árbol vacío en local, cargando del backend...');
       try {
         const res = await NodosAPI.getArbol(1);
         const datos = res.datos || res;
@@ -32,26 +41,63 @@ const PageNodo = {
     }
 
     let node = TreeManager.getNodeById(nodeId);
-    console.log('[DEBUG nodo] getNodeById(' + nodeId + '):', node ? node.label : 'null - no encontrado');
+
+    // Si aún no se encuentra en el árbol local, forzar recarga del árbol completo
+    if (!node) {
+      console.log('[DEBUG nodo] Node no encontrado en árbol local, reintentando recargar árbol del backend...');
+      try {
+        const res = await NodosAPI.getArbol(1);
+        const datos = res.datos || res;
+        const backendTree = Array.isArray(datos) ? datos : (datos.hijos || datos.nodos || [datos]);
+        TreeManager.setTreeFromBackend(backendTree);
+        node = TreeManager.getNodeById(nodeId);
+      } catch (err) {
+        console.warn('[DEBUG nodo] Error reintentando recargar árbol:', err);
+      }
+    }
 
     if (!node) {
       console.log('[DEBUG nodo] Intentando getNodo individual...');
       try {
+        // Fetch individual node info
         const res = await NodosAPI.getNodo(nodeId);
         const raw = res.datos || res;
         console.log('[DEBUG nodo] getNodo respuesta raw:', raw);
+
+        // Also fetch children of this node from backend
+        let hijosTransformed = [];
+        try {
+          const hijosRes = await NodosAPI.getNodos({ padre: nodeId });
+          const hijosRaw = (hijosRes && hijosRes.datos) ? hijosRes.datos : [];
+          console.log('[DEBUG nodo] hijos del nodo:', hijosRaw.length);
+          hijosTransformed = hijosRaw.map(h => ({
+            id: h.id,
+            label: h.nombre || 'Sin nombre',
+            icon: (h.icono && h.icono.length <= 4) ? h.icono : (h.descripcion && h.descripcion.length <= 4 ? h.descripcion : '📌'),
+            description: h.descripcion || '',
+            children: [],
+          }));
+        } catch (hijosErr) {
+          console.warn('[DEBUG nodo] No se pudieron cargar hijos:', hijosErr);
+        }
+
         node = {
           id: raw.id,
           label: raw.nombre || 'Sin nombre',
-          icon: raw.icono || raw.descripcion || '📌',
-          description: '',
-          children: [],
+          icon: (raw.icono && raw.icono.length <= 4) ? raw.icono : (raw.descripcion && raw.descripcion.length <= 4 ? raw.descripcion : '📌'),
+          description: raw.descripcion || '',
+          children: hijosTransformed,
         };
       } catch (err) {
         console.error('[DEBUG nodo] getNodo falló:', err);
         this.showError('No se encontró el nodo solicitado.');
         return;
       }
+    }
+
+    if (!this._hashListenerAdded) {
+      this._hashListenerAdded = true;
+      window.addEventListener('hashchange', () => this.init());
     }
 
     this.renderHeader(node, nodeId);
@@ -125,11 +171,13 @@ const PageNodo = {
     const esNodoBackend = typeof node.id === 'number' || !isNaN(parseInt(nodeId));
     console.log('[DEBUG loadContent] node.id:', node.id, typeof node.id, '| nodeId param:', nodeId, '| esNodoBackend:', esNodoBackend);
 
+    const hasValidDesc = node.description && node.description.trim().length > 4;
+
     if (!esNodoBackend) {
       // Nodo local sin ID numérico
-      contentArea.innerHTML = node.description
+      contentArea.innerHTML = hasValidDesc
         ? `<div class="node-content-card"><div class="node-content-text">${this.formatContent(node.description)}</div></div>`
-        : this._emptyContent('Sin contenido disponible', 'Este es un nodo del árbol sin material asignado.');
+        : (node.children && node.children.length ? '' : this._emptyContent('Sin contenido disponible', 'Este es un nodo del árbol sin material asignado.'));
       return;
     }
 
@@ -152,8 +200,10 @@ const PageNodo = {
       if (materiales.length === 0) {
         const hasChildren = node.children && node.children.length > 0;
         if (hasChildren) {
-          contentArea.innerHTML = ''; // los hijos se renderizan abajo en renderChildren
-        } else if (node.description) {
+          contentArea.innerHTML = hasValidDesc
+            ? `<div class="node-content-card"><div class="node-content-text">${this.formatContent(node.description)}</div></div>`
+            : ''; // los hijos se renderizan abajo en renderChildren
+        } else if (hasValidDesc) {
           contentArea.innerHTML = `<div class="node-content-card"><div class="node-content-text">${this.formatContent(node.description)}</div></div>`;
         } else {
           contentArea.innerHTML = this._emptyContent('Sin contenido disponible', 'Este nodo aún no tiene material de estudio asignado.');
@@ -161,36 +211,41 @@ const PageNodo = {
         return;
       }
 
-      // Separar por tipo
-      const teoria = materiales.find(m => m.tipo === 'teoria');
-      const ejemplo = materiales.find(m => m.tipo === 'ejemplo');
-      const tip = materiales.find(m => m.tipo === 'tip_icfes');
+      // Renderizar materiales
+      let html = '';
+      materiales.forEach(mat => {
+        const titulo = Utils.sanitizeHTML(mat.titulo || 'Material de Estudio');
+        const contenidoFormatted = this.formatContent(mat.contenido || mat.cuerpo || '');
 
-      contentArea.innerHTML = `
-        ${teoria ? `
-          <div class="node-content-card">
-            <h4 style="margin-bottom:12px;font-size:1rem;color:var(--accent)">
-              📖 ${Utils.sanitizeHTML(teoria.titulo || 'Teoría')}
-            </h4>
-            <div class="node-content-text">${this.formatContent(teoria.contenido)}</div>
-          </div>` : ''}
+        if (mat.tipo === 'ejemplo') {
+          html += `
+            <div class="node-content-card" style="border-left:3px solid var(--accent)">
+              <h4 style="margin-bottom:12px;font-size:1rem;color:var(--accent)">
+                💡 ${titulo}
+              </h4>
+              <div class="node-content-text">${contenidoFormatted}</div>
+            </div>`;
+        } else if (mat.tipo === 'tip_icfes') {
+          html += `
+            <div class="node-content-card" style="border-left:3px solid var(--coral);background:rgba(255,107,79,0.06)">
+              <h4 style="margin-bottom:12px;font-size:1rem;color:var(--coral)">
+                🎯 ${titulo}
+              </h4>
+              <div class="node-content-text">${contenidoFormatted}</div>
+            </div>`;
+        } else {
+          // 'teoria', 'texto', o cualquier otro tipo
+          html += `
+            <div class="node-content-card">
+              <h4 style="margin-bottom:12px;font-size:1rem;color:var(--accent)">
+                📖 ${titulo}
+              </h4>
+              <div class="node-content-text">${contenidoFormatted}</div>
+            </div>`;
+        }
+      });
 
-        ${ejemplo ? `
-          <div class="node-content-card" style="border-left:3px solid var(--accent)">
-            <h4 style="margin-bottom:12px;font-size:1rem;color:var(--accent)">
-              💡 ${Utils.sanitizeHTML(ejemplo.titulo || 'Ejemplo')}
-            </h4>
-            <div class="node-content-text">${this.formatContent(ejemplo.contenido)}</div>
-          </div>` : ''}
-
-        ${tip ? `
-          <div class="node-content-card" style="border-left:3px solid var(--coral);background:rgba(255,107,79,0.06)">
-            <h4 style="margin-bottom:12px;font-size:1rem;color:var(--coral)">
-              🎯 ${Utils.sanitizeHTML(tip.titulo || 'Cómo pregunta el ICFES')}
-            </h4>
-            <div class="node-content-text">${this.formatContent(tip.contenido)}</div>
-          </div>` : ''}
-      `;
+      contentArea.innerHTML = html;
 
     } catch (err) {
       console.error('[DEBUG loadContent] Error:', err);
@@ -219,11 +274,15 @@ const PageNodo = {
   },
 
   renderChildren(node) {
-    if (!node.children || !node.children.length) return;
-
     const section = document.getElementById('node-children-section');
     const list = document.getElementById('node-children-list');
     if (!section || !list) return;
+
+    if (!node.children || !node.children.length) {
+      section.style.display = 'none';
+      list.innerHTML = '';
+      return;
+    }
 
     section.style.display = 'block';
     list.innerHTML = node.children.map(child => {

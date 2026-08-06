@@ -9,7 +9,7 @@ if (!process.env.DATABASE_URL) {
 
 const pool = new Pool({
   connectionString:            process.env.DATABASE_URL,
-  ssl:                         process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+  ssl:                         { rejectUnauthorized: false },
   max:                         parseInt(process.env.PG_MAX_POOL || '10', 10),
   idleTimeoutMillis:           parseInt(process.env.PG_IDLE_TIMEOUT || '30000', 10),
   connectionTimeoutMillis:     parseInt(process.env.PG_CONNECTION_TIMEOUT || '10000', 10),

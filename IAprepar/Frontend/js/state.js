@@ -184,13 +184,19 @@ const TreeManager = (() => {
   const DEFAULT_TREE = [];
 
   const transformBackendNode = (node) => {
+    const rawDesc = node.descripcion || node.description || '';
     const rawIcon = node.icono || node.icon || '';
-    const icon = rawIcon && rawIcon.length <= 4 ? rawIcon : '📌';
+    const isShortDescIcon = rawDesc && rawDesc.trim().length <= 4;
+    const isShortIcon = rawIcon && rawIcon.trim().length <= 4;
+
+    const icon = isShortDescIcon ? rawDesc.trim() : (isShortIcon ? rawIcon.trim() : '📌');
+    const description = isShortDescIcon ? '' : rawDesc;
+
     return {
       id: node.id || node.id_nodo,
       label: node.nombre || node.label || 'Sin nombre',
       icon,
-      description: node.descripcion || '',
+      description,
       children: (node.hijos || node.children || []).map(transformBackendNode),
     };
   };
@@ -201,41 +207,8 @@ const TreeManager = (() => {
 
   const setTreeFromBackend = (backendTree) => {
     const transformed = (backendTree || []).map(transformBackendNode);
-    const merged = JSON.parse(JSON.stringify(DEFAULT_TREE));
-
-    const findInTree = (nodes, id) => {
-      for (const n of nodes) {
-        if (String(n.id) === String(id)) return n;
-        if (n.children) {
-          const found = findInTree(n.children, id);
-          if (found) return found;
-        }
-      }
-      return null;
-    };
-
-    for (const bNode of transformed) {
-      const existing = findInTree(merged, bNode.id);
-      if (existing) {
-        existing.label = bNode.label || existing.label;
-        existing.description = bNode.description || existing.description;
-        if (bNode.icon && bNode.icon !== '📌') existing.icon = bNode.icon;
-        if (bNode.children && bNode.children.length) {
-          for (const child of bNode.children) {
-            const existingChild = findInTree(existing.children || [], child.id);
-            if (!existingChild) {
-              existing.children = existing.children || [];
-              existing.children.push(child);
-            }
-          }
-        }
-      } else {
-        merged.push(bNode);
-      }
-    }
-
-    saveTree(merged);
-    return merged;
+    saveTree(transformed);
+    return transformed;
   };
 
   const addNode = (parentId, label, icon = '📌', description = '') => {
