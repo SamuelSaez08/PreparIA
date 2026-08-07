@@ -141,7 +141,7 @@ const getEstado = async (req, res, next) => {
 
     return ok(res, 'Estado de la integración IA', {
       activa: apiConfigurada && testExitoso,
-      modelo: process.env.GEMINI_MODEL || 'gemini-1.5-flash',
+      modelo: process.env.GEMINI_MODEL || 'gemini-2.5-flash',
       api_configurada: apiConfigurada,
       test_exitoso: testExitoso
     });

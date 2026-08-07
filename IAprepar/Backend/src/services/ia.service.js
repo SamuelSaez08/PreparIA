@@ -463,18 +463,20 @@ Responde ÚNICAMENTE con este JSON exacto, sin texto adicional, sin markdown:
       const detalle = err.errorDetails ? JSON.stringify(err.errorDetails) : (err.status || '');
       logger.warn(`Intento ${attempts} fallido: ${err.message} ${detalle}`.trim());
       lastError = err;
-      if (err.message && /400|404|401|403/.test(err.message)) break;
-      if (err.message && /503/.test(err.message)) {
+      if (err.message && /401|403/.test(err.message)) break;
+      if (err.message && /404|400|503/.test(err.message)) {
         if (modeloActualIdx < modelosFallback.length - 1) {
           modeloActualIdx++;
           model = getModel(modelosFallback[modeloActualIdx]);
-          logger.warn(`[ia.service] 503 — cambiando a modelo fallback: ${modelosFallback[modeloActualIdx]}`);
+          logger.warn(`[ia.service] Error en modelo — cambiando a fallback: ${modelosFallback[modeloActualIdx]}`);
           await new Promise(r => setTimeout(r, 1000));
           continue;
         }
-        logger.warn('[ia.service] 503 en todos los modelos, esperando 3s...');
-        await new Promise(r => setTimeout(r, attempts * 3000));
-        continue;
+        if (/503/.test(err.message)) {
+          logger.warn('[ia.service] 503 en todos los modelos, esperando 3s...');
+          await new Promise(r => setTimeout(r, attempts * 3000));
+          continue;
+        }
       }
       if (err.message && /429/.test(err.message)) {
         logger.warn('[ia.service] Rate limit (429), esperando 10s...');
