@@ -23,7 +23,7 @@ const PageRegistro = {
       if (!Validate.minLen(v.nombre, 2))              { Validate.showError('nombre',   'Ingresa tu nombre completo.');       ok = false; }
       if (!Validate.email(v.email))                   { Validate.showError('email',    'Correo electrónico inválido.');       ok = false; }
       if (!Validate.noEmpty(v.grado))                 { Validate.showError('grado',    'Selecciona tu grado.');              ok = false; }
-      if (!Validate.minLen(v.password, 6))            { Validate.showError('password', 'Mínimo 6 caracteres.');             ok = false; }
+      if (!Validate.minLen(v.password, 8))            { Validate.showError('password', 'Mínimo 8 caracteres.');             ok = false; }
       if (!Validate.match(v.password, v.confirm))     { Validate.showError('confirm',  'Las contraseñas no coinciden.');     ok = false; }
       if (!ok) return;
 
