@@ -3,14 +3,14 @@
 const { body } = require('express-validator');
 
 const loginRules = [
-  body('email').isEmail().withMessage('Correo electrónico inválido.').normalizeEmail(),
+  body('email').isEmail().withMessage('Correo electrónico inválido.').trim().toLowerCase(),
   body('password').notEmpty().withMessage('La contraseña es requerida.'),
 ];
 
 const registerRules = [
   body('nombre').trim().notEmpty().withMessage('El nombre es requerido.'),
   body('apellido').trim().optional(),
-  body('email').isEmail().withMessage('Correo electrónico inválido.').normalizeEmail(),
+  body('email').isEmail().withMessage('Correo electrónico inválido.').trim().toLowerCase(),
   body('password').isLength({ min: 8 }).withMessage('La contraseña debe tener mínimo 8 caracteres.'),
 ];
 

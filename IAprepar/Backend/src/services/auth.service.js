@@ -12,7 +12,7 @@ if (!JWT_SECRET) throw new Error('JWT_SECRET no configurado. Revisa tu archivo .
 const JWT_EXPIRES_IN  = process.env.JWT_EXPIRES_IN   || '8h';
 const SALT_ROUNDS     = parseInt(process.env.BCRYPT_SALT_ROUNDS || '12', 10);
 
-const register = async ({ nombre, apellido, email, password, id_rol = 2 }) => {
+const register = async ({ nombre, apellido, email, password, grado, id_rol = 2 }) => {
   const { rows: existe } = await db.query(
     'SELECT id FROM usuario WHERE email = $1',
     [email.toLowerCase().trim()]
@@ -36,7 +36,7 @@ const register = async ({ nombre, apellido, email, password, id_rol = 2 }) => {
     const usuario = uRows[0];
 
     if (id_rol === 2) {
-      await usuarioRepo.createPerfil(client, usuario.id);
+      await usuarioRepo.createPerfil(client, usuario.id, grado || null);
     }
 
     return uRows;

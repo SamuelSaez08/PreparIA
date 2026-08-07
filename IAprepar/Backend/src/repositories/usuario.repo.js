@@ -13,8 +13,8 @@ const create = (client, { nombre, apellido, email, passwordHash, idRol }) =>
     [nombre, apellido, email, passwordHash, idRol]
   );
 
-const createPerfil = (client, idUsuario) =>
-  client.query('INSERT INTO perfil_estudiante (id_usuario, grado, creado_en) VALUES ($1, NULL, NOW())', [idUsuario]);
+const createPerfil = (client, idUsuario, grado = null) =>
+  client.query('INSERT INTO perfil_estudiante (id_usuario, grado, creado_en) VALUES ($1, $2, NOW())', [idUsuario, grado]);
 
 const closeSessions = (idUsuario) =>
   db.query('UPDATE sesion_usuario SET activa = false, cerrada_en = NOW() WHERE id_usuario = $1 AND activa = true', [idUsuario]);
