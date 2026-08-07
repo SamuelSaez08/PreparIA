@@ -21,27 +21,39 @@ app.use(helmet({
 }));
 
 // ── CORS
+const envFrontendUrl = (process.env.FRONTEND_URL || '').replace(/\/+$/, '');
+const extraOrigins = (process.env.CORS_ORIGIN || 'http://localhost:5500,http://127.0.0.1:5500,http://localhost:3001,http://192.168.1.9:5500')
+  .split(',')
+  .map(o => o.trim().replace(/\/+$/, ''))
+  .filter(Boolean);
+
 const allowedOrigins = [
-  process.env.FRONTEND_URL,
-  ...(process.env.CORS_ORIGIN || 'http://localhost:5500,http://127.0.0.1:5500,http://localhost:3001')
-    .split(',')
-    .map(o => o.trim()),
+  'https://prepar-ia.vercel.app',
+  'https://preparia.vercel.app',
+  envFrontendUrl,
+  ...extraOrigins,
 ].filter(Boolean);
 
 const corsOptions = {
   origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
-    callback(new Error(`CORS: Origen no permitido → ${origin}`));
+    if (!origin) return callback(null, true);
+
+    const cleanOrigin = origin.replace(/\/+$/, '');
+
+    if (allowedOrigins.includes(cleanOrigin) || /\.vercel\.app$/.test(cleanOrigin)) {
+      return callback(null, true);
+    }
+
+    logger.warn(`[CORS] Origen no permitido: ${origin}`);
+    return callback(null, false);
   },
-  methods:            ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders:     ['Content-Type', 'Authorization'],
-  exposedHeaders:     ['X-RateLimit-Limit', 'X-RateLimit-Remaining'],
-  credentials:        true,
+  methods:              ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders:       ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
+  exposedHeaders:       ['X-RateLimit-Limit', 'X-RateLimit-Remaining'],
+  credentials:          true,
   optionsSuccessStatus: 204,
 };
 
-// Preflight explícito — necesario para peticiones con Authorization header desde Vercel
-app.options('*', cors(corsOptions));
 app.use(cors(corsOptions));
 
 // ── Rate limiter
