@@ -14,6 +14,6 @@ const PREPARIA_CONFIG = (() => {
   return {
     API_BASE_URL: isDev
       ? 'http://localhost:3000/api/v1'
-      : 'https://preparia-api.onrender.com/api/v1',   // TODO: reemplazar con la URL real de Railway/Render cuando esté disponible
+      : 'https://preparia.onrender.com/api/v1',
   };
 })();
