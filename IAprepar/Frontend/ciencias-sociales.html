@@ -187,6 +187,166 @@
       padding-left: calc(12px - 3px);
       background: rgba(191, 255, 0, 0.05);
     }
+
+    /* ══════════════════════════════════════════════════════════
+       RUTA DE APRENDIZAJE
+       Camino vertical en zigzag. El color comunica dominio, no
+       permiso: aquí no se bloquea nada, todo tema es accesible.
+       ══════════════════════════════════════════════════════════ */
+    .vista-toggle {
+      display: inline-flex;
+      background: var(--ink-soft);
+      border: 2px solid rgba(245,245,240,0.12);
+      border-radius: 100px;
+      padding: 4px;
+      gap: 4px;
+    }
+    .vista-toggle button {
+      border: none; background: none; cursor: pointer;
+      font-family: var(--font); font-weight: 700; font-size: 0.875rem;
+      color: rgba(245,245,240,0.55);
+      padding: 8px 18px; border-radius: 100px;
+      transition: all var(--transition);
+    }
+    .vista-toggle button:hover { color: var(--white); }
+    .vista-toggle button.activa { background: var(--acid); color: var(--ink); }
+
+    .ruta { max-width: 640px; margin: 0 auto; }
+
+    .ruta-etapa { margin-bottom: 56px; }
+
+    .ruta-banner {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 20px; flex-wrap: wrap;
+      background: linear-gradient(135deg, var(--acid-dark), var(--acid));
+      color: var(--ink);
+      border-radius: var(--radius-lg);
+      padding: 20px 26px;
+      box-shadow: var(--shadow-clay);
+      position: sticky; top: 12px; z-index: 5;
+    }
+    .ruta-banner-eyebrow {
+      font-size: 0.875rem; font-weight: 800; letter-spacing: 0.1em;
+      text-transform: uppercase; opacity: 0.62; margin: 0 0 2px;
+    }
+    .ruta-banner h3 { font-size: 1.35rem; font-weight: 800; margin: 0; line-height: 1.2; }
+    .ruta-banner-avance { text-align: right; line-height: 1.1; }
+    .ruta-banner-cifra { display: block; font-size: 1.6rem; font-weight: 800; font-variant-numeric: tabular-nums; }
+    .ruta-banner-pista { font-size: 0.875rem; font-weight: 700; opacity: 0.65; }
+
+    .ruta-camino {
+      list-style: none; margin: 0; padding: 34px 0 0;
+      display: flex; flex-direction: column; align-items: center; gap: 34px;
+    }
+
+    .ruta-paso {
+      display: flex; flex-direction: column; align-items: center; gap: 7px;
+      transform: translateX(var(--x, 0));
+      position: relative;
+      max-width: 210px; text-align: center;
+    }
+
+    .ruta-nodo {
+      position: relative;
+      width: 80px; height: 80px; border-radius: 50%;
+      border: none; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.9rem; line-height: 1;
+      background: var(--ink-muted);
+      color: var(--white);
+      box-shadow: 0 6px 0 rgba(0,0,0,0.45);
+      transition: transform 0.12s ease, box-shadow 0.12s ease;
+    }
+    .ruta-nodo:hover  { transform: translateY(-3px); box-shadow: 0 9px 0 rgba(0,0,0,0.45); }
+    .ruta-nodo:active { transform: translateY(3px);  box-shadow: 0 2px 0 rgba(0,0,0,0.45); }
+    .ruta-nodo:focus-visible { outline: 3px solid var(--white); outline-offset: 4px; }
+
+    .ruta-nodo.dominado {
+      background: var(--acid); color: var(--ink);
+      box-shadow: 0 6px 0 var(--acid-dark);
+    }
+    .ruta-nodo.dominado:hover { box-shadow: 0 9px 0 var(--acid-dark); }
+
+    .ruta-nodo.progreso {
+      background: var(--ink-muted);
+      border: 2px solid rgba(191,255,0,0.35);
+    }
+    .ruta-nodo.disponible { background: var(--ink-muted); }
+    .ruta-nodo.vacio {
+      background: rgba(245,245,240,0.05);
+      color: rgba(245,245,240,0.28);
+      box-shadow: 0 6px 0 rgba(0,0,0,0.25);
+    }
+
+    .ruta-nodo.siguiente {
+      background: var(--acid); color: var(--ink);
+      box-shadow: 0 6px 0 var(--acid-dark), 0 0 0 6px var(--acid-glow);
+      animation: ruta-latido 2.2s ease-in-out infinite;
+    }
+    @keyframes ruta-latido {
+      0%, 100% { box-shadow: 0 6px 0 var(--acid-dark), 0 0 0 6px var(--acid-glow); }
+      50%      { box-shadow: 0 6px 0 var(--acid-dark), 0 0 0 16px rgba(191,255,0,0.05); }
+    }
+
+    .ruta-anillo {
+      position: absolute; inset: -6px;
+      width: calc(100% + 12px); height: calc(100% + 12px);
+      transform: rotate(-90deg); pointer-events: none;
+    }
+    .ruta-anillo-fondo  { fill: none; stroke: rgba(245,245,240,0.10); stroke-width: 6; }
+    .ruta-anillo-avance { fill: none; stroke: var(--acid); stroke-width: 6; stroke-linecap: round; }
+
+    /* Aire extra para que la etiqueta no toque el texto del tema anterior */
+    .ruta-paso:has(.siguiente) { margin-top: 14px; }
+
+    .ruta-aqui {
+      position: absolute; top: -34px;
+      background: var(--white); color: var(--ink);
+      font-size: 0.875rem; font-weight: 800;
+      padding: 5px 13px; border-radius: 100px;
+      white-space: nowrap;
+    }
+    .ruta-aqui::after {
+      content: ""; position: absolute; bottom: -5px; left: 50%;
+      transform: translateX(-50%);
+      border-left: 6px solid transparent; border-right: 6px solid transparent;
+      border-top: 6px solid var(--white);
+    }
+
+    .ruta-nombre {
+      font-size: 0.95rem; font-weight: 700; line-height: 1.25;
+      color: var(--white);
+    }
+    .ruta-detalle {
+      font-size: 0.875rem; line-height: 1.3;
+      color: rgba(245,245,240,0.45);
+    }
+    .ruta-vacia, .ruta-mensaje {
+      text-align: center; padding: 48px 20px;
+      color: rgba(245,245,240,0.4); font-size: 0.95rem;
+    }
+    .ruta-mensaje-icono { font-size: 3rem; margin-bottom: 12px; }
+
+    .ruta-leyenda {
+      display: flex; flex-wrap: wrap; gap: 10px 22px;
+      justify-content: center; margin-bottom: 28px;
+      font-size: 0.875rem; color: rgba(245,245,240,0.6); font-weight: 600;
+    }
+    .ruta-leyenda i {
+      display: inline-block; width: 13px; height: 13px; border-radius: 50%;
+      margin-right: 7px; vertical-align: -1px;
+    }
+
+    @media (max-width: 768px) {
+      .ruta-paso { transform: translateX(calc(var(--x, 0) * 0.55)); max-width: 170px; }
+      .ruta-nodo { width: 68px; height: 68px; font-size: 1.6rem; }
+      .ruta-banner h3 { font-size: 1.15rem; }
+      .ruta-nombre, .ruta-detalle, .ruta-leyenda, .vista-toggle button { font-size: 1rem; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .ruta-nodo, .ruta-nodo.siguiente { animation: none; transition: none; }
+    }
   </style>
 </head>
 
@@ -242,6 +402,11 @@
             <h2>🌍 Ciencias Sociales</h2>
             <p class="mt-sm">Explora los temas del ICFES de forma visual e interactiva.</p>
           </div>
+          <div class="vista-toggle" role="tablist" aria-label="Forma de ver los contenidos">
+            <button type="button" id="btn-vista-ruta"  class="activa" role="tab" aria-selected="true">🗺️ Ruta</button>
+            <button type="button" id="btn-vista-arbol" role="tab" aria-selected="false">🌳 Árbol</button>
+          </div>
+
           <!-- Controles de edición del árbol: solo administradores (RF-04) -->
           <div class="flex gap-md flex-wrap" data-admin-only hidden>
             <button onclick="PageCienciasSociales.expandAll()" class="btn btn-ghost btn-sm">Expandir todo</button>
@@ -251,6 +416,22 @@
           </div>
         </div>
       </div>
+
+      <!-- ══════════ VISTA RUTA ══════════ -->
+      <div id="vista-ruta">
+        <div class="ruta-leyenda">
+          <span><i style="background:var(--acid)"></i>Dominado (80% o más)</span>
+          <span><i style="background:var(--ink-muted);border:2px solid rgba(191,255,0,0.5)"></i>En progreso</span>
+          <span><i style="background:var(--ink-muted)"></i>Sin practicar</span>
+          <span><i style="background:rgba(245,245,240,0.08)"></i>Sin contenido aún</span>
+        </div>
+        <div id="ruta-container" class="ruta">
+          <div class="ruta-mensaje">Cargando tu ruta…</div>
+        </div>
+      </div>
+
+      <!-- ══════════ VISTA ÁRBOL ══════════ -->
+      <div id="vista-arbol" hidden>
 
       <!-- Search bar -->
       <div class="mb-lg">
@@ -296,6 +477,7 @@
           <div class="stat-value" style="color:var(--amber);font-size:1.8rem">+</div>
         </div>
       </div>
+      </div><!-- /vista-arbol -->
     </main>
   </div>
 
@@ -380,7 +562,8 @@
   <script src="js/api.js?v=1.0.2"></script>
   <script src="js/state.js?v=1.0.2"></script>
   <script src="js/ui.js?v=1.0.2"></script>
-  <script src="js/pages/page-ciencias-sociales.js?v=1.0.2"></script>
+  <script src="js/ruta.js?v=1.0.3"></script>
+<script src="js/pages/page-ciencias-sociales.js?v=1.0.2"></script>
   <script src="js/app.js?v=1.0.2"></script>
   <script>
     document.addEventListener('DOMContentLoaded', () => {

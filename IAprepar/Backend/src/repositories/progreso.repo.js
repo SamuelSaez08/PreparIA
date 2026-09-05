@@ -42,4 +42,34 @@ const upsertProgreso = (client, idUsuario, idMateria, correctas, total, puntaje)
     [idUsuario, idMateria, correctas, total, puntaje]
   );
 
-module.exports = { getStatsGlobales, getProgresoMaterias, getActividad30d, getByMateria, upsertProgreso };
+/**
+ * Dominio por nodo de aprendizaje, derivado de respuestas reales.
+ * No hay tabla de "nodo completado": el porcentaje sale de las preguntas de ese
+ * nodo que el estudiante ya respondió en sus simulacros.
+ */
+const getProgresoNodos = (idUsuario, idMateria) =>
+  db.query(
+    `SELECT n.id, n.nombre, n.id_padre, n.orden, n.id_nivel,
+            (SELECT COUNT(*)::int FROM pregunta p
+              WHERE p.id_nodo = n.id AND p.activa = true) AS preguntas,
+            (SELECT COUNT(*)::int FROM contenido_nodo c
+              WHERE c.id_nodo = n.id AND c.activo = true) AS materiales,
+            (SELECT COUNT(*)::int FROM respuesta_intento r
+               JOIN pregunta p2 ON p2.id = r.id_pregunta
+               JOIN intento_simulacro i ON i.id = r.id_intento
+              WHERE p2.id_nodo = n.id AND i.id_usuario = $2) AS respondidas,
+            (SELECT COUNT(*)::int FROM respuesta_intento r
+               JOIN pregunta p2 ON p2.id = r.id_pregunta
+               JOIN intento_simulacro i ON i.id = r.id_intento
+              WHERE p2.id_nodo = n.id AND i.id_usuario = $2 AND r.es_correcta = true) AS correctas,
+            (SELECT MAX(i.iniciado_en) FROM respuesta_intento r
+               JOIN pregunta p2 ON p2.id = r.id_pregunta
+               JOIN intento_simulacro i ON i.id = r.id_intento
+              WHERE p2.id_nodo = n.id AND i.id_usuario = $2) AS ultima_practica
+     FROM nodo_aprendizaje n
+     WHERE n.id_materia = $1 AND n.activo = true
+     ORDER BY COALESCE(n.id_nivel, 0), COALESCE(n.orden, 0), n.id`,
+    [idMateria, idUsuario]
+  );
+
+module.exports = { getStatsGlobales, getProgresoMaterias, getActividad30d, getByMateria, upsertProgreso, getProgresoNodos };

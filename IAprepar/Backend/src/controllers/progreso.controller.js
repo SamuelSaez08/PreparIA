@@ -53,4 +53,60 @@ const getProgresoMateria = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
-module.exports = { getProgreso, getProgresoMateria };
+/**
+ * Dominio por nodo, para pintar la ruta de aprendizaje.
+ * Un nodo se considera:
+ *   dominado    → 80% o más de aciertos
+ *   en progreso → ya respondió algo pero no llega al 80%
+ *   disponible  → tiene material o preguntas, aún sin practicar
+ *   vacio       → todavía no tiene contenido cargado
+ */
+const getProgresoNodos = async (req, res, next) => {
+  try {
+    const idMateria = parseInt(req.query.materia || '1', 10);
+    const { rows } = await progresoRepo.getProgresoNodos(req.user.id_usuario, idMateria);
+
+    const nodos = rows.map((n) => {
+      const porcentaje = n.respondidas > 0
+        ? Math.round((n.correctas / n.respondidas) * 100)
+        : 0;
+
+      let estado;
+      if (n.preguntas === 0 && n.materiales === 0) estado = 'vacio';
+      else if (n.respondidas === 0)               estado = 'disponible';
+      else if (porcentaje >= 80)                  estado = 'dominado';
+      else                                        estado = 'en_progreso';
+
+      return {
+        id: n.id,
+        nombre: n.nombre,
+        id_padre: n.id_padre,
+        preguntas: n.preguntas,
+        materiales: n.materiales,
+        respondidas: n.respondidas,
+        correctas: n.correctas,
+        porcentaje,
+        estado,
+        ultima_practica: n.ultima_practica,
+      };
+    });
+
+    const conContenido = nodos.filter(n => n.estado !== 'vacio');
+    const dominados    = nodos.filter(n => n.estado === 'dominado').length;
+
+    return ok(res, 'Progreso por nodo obtenido.', {
+      nodos,
+      resumen: {
+        total: nodos.length,
+        con_contenido: conContenido.length,
+        dominados,
+        en_progreso: nodos.filter(n => n.estado === 'en_progreso').length,
+        porcentaje_ruta: conContenido.length
+          ? Math.round((dominados / conContenido.length) * 100)
+          : 0,
+      },
+    });
+  } catch (err) { next(err); }
+};
+
+module.exports = { getProgreso, getProgresoMateria, getProgresoNodos };

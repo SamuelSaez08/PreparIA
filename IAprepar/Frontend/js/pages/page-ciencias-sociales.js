@@ -3,6 +3,8 @@
 const PageCienciasSociales = {
   selectedNodeId: null,
   isAdmin: false,
+  vista: 'ruta',          // 'ruta' | 'arbol'
+  progresoNodos: [],
 
   async init() {
     Auth.requireAuth();
@@ -26,8 +28,61 @@ const PageCienciasSociales = {
     const addNodeCard = document.getElementById('add-node-card');
     if (addNodeCard && this.isAdmin) addNodeCard.style.display = 'flex';
 
+    this.montarConmutador();
+
     State.remove(State.KEYS.TREE_NODES);
     await this.loadTree();
+  },
+
+  /* ────────────────────────────────────────────────────────────
+     Conmutador Ruta / Árbol
+     La ruta es la vista por defecto para el estudiante; el árbol
+     conserva el buscador y las herramientas de administración.
+  ──────────────────────────────────────────────────────────── */
+  montarConmutador() {
+    const btnRuta  = document.getElementById('btn-vista-ruta');
+    const btnArbol = document.getElementById('btn-vista-arbol');
+    if (!btnRuta || !btnArbol) return;
+
+    // El administrador entra directo al árbol: es donde puede editar.
+    const guardada = State.get('preparia_vista_contenidos');
+    this.vista = guardada || (this.isAdmin ? 'arbol' : 'ruta');
+
+    const aplicar = (vista) => {
+      this.vista = vista;
+      State.set('preparia_vista_contenidos', vista);
+
+      document.getElementById('vista-ruta').hidden  = vista !== 'ruta';
+      document.getElementById('vista-arbol').hidden = vista !== 'arbol';
+
+      btnRuta.classList.toggle('activa', vista === 'ruta');
+      btnArbol.classList.toggle('activa', vista === 'arbol');
+      btnRuta.setAttribute('aria-selected', String(vista === 'ruta'));
+      btnArbol.setAttribute('aria-selected', String(vista === 'arbol'));
+    };
+
+    btnRuta.addEventListener('click', () => aplicar('ruta'));
+    btnArbol.addEventListener('click', () => aplicar('arbol'));
+    aplicar(this.vista);
+  },
+
+  /** Dominio real por tema, calculado en el servidor. */
+  async cargarProgresoNodos() {
+    try {
+      const res = await ProgresoAPI.getProgresoNodos(1);
+      this.progresoNodos = (res.datos && res.datos.nodos) || [];
+    } catch (err) {
+      // La ruta se dibuja igual: sin datos, todos los temas salen
+      // como "sin practicar" en vez de romper la página.
+      console.warn('No se pudo cargar el progreso por nodo:', err);
+      this.progresoNodos = [];
+    }
+  },
+
+  renderRuta() {
+    const contenedor = document.getElementById('ruta-container');
+    if (!contenedor) return;
+    RutaAprendizaje.render(contenedor, TreeManager.getTree(), this.progresoNodos);
   },
 
   async loadTree() {
@@ -40,7 +95,10 @@ const PageCienciasSociales = {
       console.warn('NodosAPI.getArbol failed, using local tree:', err);
       if (err.networkError) UI.showToast('Sin conexión. Mostrando datos locales.', 'error');
     }
+
+    await this.cargarProgresoNodos();
     this.renderTree();
+    this.renderRuta();
   },
 
   renderTree() {

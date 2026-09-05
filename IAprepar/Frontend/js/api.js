@@ -342,6 +342,11 @@ const ProgresoAPI = {
   async getProgresoMateria(id) {
     return apiFetch(`/progreso/materia/${id}`);
   },
+
+  /** Dominio tema por tema, para pintar la ruta de aprendizaje. */
+  async getProgresoNodos(idMateria = 1) {
+    return apiFetch(`/progreso/nodos?materia=${idMateria}`);
+  },
 };
 
 /* ──────────────────────────────────────────────────────────
