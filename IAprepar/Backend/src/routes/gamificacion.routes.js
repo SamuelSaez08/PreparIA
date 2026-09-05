@@ -7,7 +7,7 @@ const { authenticate } = require('../middlewares/auth.middleware');
 // GET /api/v1/ranking?period=all_time|weekly|monthly
 router.get('/ranking', authenticate, gamificacionCtrl.getRanking);
 
-// GET /api/v1/usuarios/:id/stats
-router.get('/usuarios/:id/stats', authenticate, gamificacionCtrl.getStatsUsuario);
+// Las estadísticas por usuario viven en usuario.routes.js
+// (GET /api/v1/usuarios/:id/stats)
 
 module.exports = router;

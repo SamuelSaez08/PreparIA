@@ -73,7 +73,7 @@
   <div class="container">
     <a href="index.html" class="nav-logo">Prepar<span>IA</span></a>
     <div class="flex items-center gap-md">
-      <span style="font-size:0.85rem;color:rgba(245,245,240,0.5)">Hola, <strong data-user-name style="color:var(--white)">Estudiante</strong></span>
+      <span style="font-size: 0.875rem;color:rgba(245,245,240,0.5)">Hola, <strong data-user-name style="color:var(--white)">Estudiante</strong></span>
       <button id="logout-btn" class="btn btn-outline btn-sm">Salir</button>
     </div>
   </div>
@@ -104,6 +104,13 @@
       </a>
       <a href="ranking.html" class="sidebar-item" data-nav="ranking.html">
         <span class="icon">🏆</span> Ranking
+      </a>
+    </div>
+    <!-- Solo visible para cuentas con rol de administrador -->
+    <div class="sidebar-section" data-admin-only hidden>
+      <div class="sidebar-label">Administración</div>
+      <a href="admin.html" class="sidebar-item" data-nav="admin.html">
+        <span class="icon">🛠️</span> Panel de administración
       </a>
     </div>
     <div class="sidebar-section" style="margin-top:auto;padding-top:24px;border-top:1px solid rgba(245,245,240,0.07)">
@@ -157,7 +164,7 @@
       <div class="streak-widget">
         <div class="flex items-center justify-between mb-md">
           <div>
-            <div style="font-size:0.75rem;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;color:var(--acid);margin-bottom:4px">🔥 Racha de estudio</div>
+            <div style="font-size: 0.875rem;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;color:var(--acid);margin-bottom:4px">🔥 Racha de estudio</div>
             <h3>Días consecutivos</h3>
           </div>
           <div class="streak-count" id="streak-count">0</div>
@@ -174,7 +181,7 @@
             <div class="qa-icon">📝</div>
             <div>
               <div>Nuevo simulacro</div>
-              <div class="muted" style="font-size:0.78rem;font-weight:500">10 preguntas · 20 min</div>
+              <div class="muted" style="font-size: 0.875rem;font-weight:500">10 preguntas · 20 min</div>
             </div>
             <span style="margin-left:auto;color:var(--acid)">→</span>
           </a>
@@ -182,7 +189,7 @@
             <div class="qa-icon">🌍</div>
             <div>
               <div>Repasar temas</div>
-              <div class="muted" style="font-size:0.78rem;font-weight:500">Árbol interactivo</div>
+              <div class="muted" style="font-size: 0.875rem;font-weight:500">Árbol interactivo</div>
             </div>
             <span style="margin-left:auto;color:var(--acid)">→</span>
           </a>
@@ -190,7 +197,7 @@
             <div class="qa-icon">📊</div>
             <div>
               <div>Ver estadísticas</div>
-              <div class="muted" style="font-size:0.78rem;font-weight:500">Historial y gráficos</div>
+              <div class="muted" style="font-size: 0.875rem;font-weight:500">Historial y gráficos</div>
             </div>
             <span style="margin-left:auto;color:var(--acid)">→</span>
           </a>

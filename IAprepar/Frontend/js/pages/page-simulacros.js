@@ -8,6 +8,8 @@ const PageSimulacros = {
     failedAnswers: {},
     timer:         null,
     timeLeft:      0,
+    deadline:      null,
+    salidasDePestana: 0,
     finished:      false,
     startTime:     null,
     intentoId:     null,
@@ -156,22 +158,32 @@ const PageSimulacros = {
       s.answers       = {};
       s.failedAnswers = {};
       s.finished      = false;
-      s.timeLeft      = (datos.simulacro?.duracion_minutos || 20) * 60;
-      s.startTime     = Date.now();
+      const duracionSegundos = (datos.simulacro?.duracion_minutos || 20) * 60;
+      s.startTime = Date.now();
 
-      // Bug B fix: restore timer from sessionStorage if the page was reloaded mid-simulacro
+      // El cronómetro se ancla a una hora de finalización absoluta en lugar de
+      // ir restando segundos: así no acumula deriva (NFR de precisión ±500 ms)
+      // y se recupera exacto aunque la pestaña se recargue o quede en segundo
+      // plano. La validación real del vencimiento la hace el servidor.
+      s.deadline = Date.now() + duracionSegundos * 1000;
+
       if (s.intentoId) {
-        const saved = parseInt(sessionStorage.getItem(`preparia_timer_${s.intentoId}`), 10);
-        if (Number.isFinite(saved) && saved > 0 && saved < s.timeLeft) {
-          s.timeLeft = saved;
+        const guardado = parseInt(sessionStorage.getItem(`preparia_deadline_${s.intentoId}`), 10);
+        if (Number.isFinite(guardado) && guardado > Date.now() && guardado < s.deadline) {
+          s.deadline = guardado;
+        } else {
+          try { sessionStorage.setItem(`preparia_deadline_${s.intentoId}`, String(s.deadline)); } catch { /* sin almacenamiento */ }
         }
       }
+
+      s.timeLeft = Math.max(0, Math.round((s.deadline - Date.now()) / 1000));
 
       document.getElementById('simulacro-start')?.classList.add('hidden');
       document.getElementById('simulacro-quiz')?.classList.remove('hidden');
 
       this.renderQuestion();
       this.startTimer();
+      this.activarIntegridad();
     } catch (err) {
       console.error('Error starting simulacro:', err);
       if (err.networkError) {
@@ -279,19 +291,14 @@ const PageSimulacros = {
   startTimer() {
     const s = this.state;
 
-    // Bug A fix: clear any existing interval before starting a new one
     clearInterval(s.timer);
     s.timer = null;
 
-    // Render immediately so the display shows the correct (possibly restored) time
-    const initialDisplay = document.getElementById('timer');
-    if (initialDisplay) initialDisplay.textContent = Utils.formatTime(s.timeLeft);
+    if (!s.deadline) s.deadline = Date.now() + (s.timeLeft || 0) * 1000;
 
-    const storageKey = `preparia_timer_${s.intentoId}`;
-    s.timer = setInterval(() => {
-      s.timeLeft--;
-      // Bug B fix: persist remaining time on every tick
-      sessionStorage.setItem(storageKey, s.timeLeft);
+    const pintar = () => {
+      s.timeLeft = Math.max(0, Math.round((s.deadline - Date.now()) / 1000));
+
       const display = document.getElementById('timer');
       if (display) {
         display.textContent = Utils.formatTime(s.timeLeft);
@@ -299,8 +306,90 @@ const PageSimulacros = {
         if (s.timeLeft <= 120) display.classList.add('warning');
         if (s.timeLeft <= 30)  display.classList.add('danger');
       }
-      if (s.timeLeft <= 0) this.finishSimulacro();
-    }, 1000);
+
+      if (s.timeLeft <= 0) {
+        clearInterval(s.timer);
+        UI.showToast('Se acabó el tiempo. Entregando el simulacro…', 'error');
+        this.finishSimulacro();
+      }
+    };
+
+    pintar();
+    // 250 ms mantiene el error por debajo de medio segundo sin coste apreciable.
+    s.timer = setInterval(pintar, 250);
+  },
+
+  /* ────────────────────────────────────────────────────────────────────
+     Integridad del examen (NFR de seguridad).
+     Durante el simulacro se desactivan copiar, pegar, cortar, el menú
+     contextual y la selección de texto, y se registran los cambios de
+     pestaña. No es una medida infalible —ninguna lo es en el navegador—
+     pero eleva la barrera y deja constancia del intento.
+  ──────────────────────────────────────────────────────────────────── */
+  activarIntegridad() {
+    if (this._integridad) return;
+
+    const s = this.state;
+    s.salidasDePestana = 0;
+
+    const bloquear = (e) => {
+      e.preventDefault();
+      UI.showToast('Durante el simulacro no se puede copiar ni pegar.', 'error');
+      return false;
+    };
+
+    const bloquearMenu = (e) => { e.preventDefault(); return false; };
+
+    const bloquearAtajos = (e) => {
+      const tecla = (e.key || '').toLowerCase();
+      const conModificador = e.ctrlKey || e.metaKey;
+      if (conModificador && ['c', 'v', 'x', 'a', 'p', 's', 'u'].includes(tecla)) {
+        e.preventDefault();
+        UI.showToast('Atajo desactivado durante el simulacro.', 'error');
+        return false;
+      }
+      // PrintScreen no se puede interceptar de forma fiable; se registra.
+      if (tecla === 'printscreen') {
+        UI.showToast('Las capturas de pantalla quedan registradas.', 'error');
+      }
+    };
+
+    const alCambiarPestana = () => {
+      if (document.hidden && !s.finished) {
+        s.salidasDePestana++;
+        console.warn(`[PreparIA] Salida de pestaña durante el simulacro (${s.salidasDePestana}).`);
+      } else if (!document.hidden && s.salidasDePestana > 0 && !s.finished) {
+        UI.showToast(`Saliste del simulacro ${s.salidasDePestana} vez(ces). El tiempo siguió corriendo.`, 'error');
+      }
+    };
+
+    const zona = document.getElementById('simulacro-quiz') || document;
+
+    this._integridad = { zona, bloquear, bloquearMenu, bloquearAtajos, alCambiarPestana };
+
+    zona.addEventListener('copy', bloquear);
+    zona.addEventListener('cut', bloquear);
+    zona.addEventListener('paste', bloquear);
+    zona.addEventListener('contextmenu', bloquearMenu);
+    document.addEventListener('keydown', bloquearAtajos);
+    document.addEventListener('visibilitychange', alCambiarPestana);
+
+    if (zona.classList) zona.classList.add('modo-examen');
+  },
+
+  desactivarIntegridad() {
+    if (!this._integridad) return;
+    const { zona, bloquear, bloquearMenu, bloquearAtajos, alCambiarPestana } = this._integridad;
+
+    zona.removeEventListener('copy', bloquear);
+    zona.removeEventListener('cut', bloquear);
+    zona.removeEventListener('paste', bloquear);
+    zona.removeEventListener('contextmenu', bloquearMenu);
+    document.removeEventListener('keydown', bloquearAtajos);
+    document.removeEventListener('visibilitychange', alCambiarPestana);
+
+    if (zona.classList) zona.classList.remove('modo-examen');
+    this._integridad = null;
   },
 
   async finishSimulacro() {
@@ -309,7 +398,9 @@ const PageSimulacros = {
     s.finished = true;
     clearInterval(s.timer);
     // Bug B fix: clear sessionStorage when the simulacro ends
+    sessionStorage.removeItem(`preparia_deadline_${s.intentoId}`);
     sessionStorage.removeItem(`preparia_timer_${s.intentoId}`);
+    this.desactivarIntegridad();
 
     const timeUsed = Math.round((Date.now() - s.startTime) / 1000);
 

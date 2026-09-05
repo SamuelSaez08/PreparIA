@@ -264,5 +264,9 @@ const Utils = {
     const user = Session.getUser();
     const els = document.querySelectorAll('[data-user-name]');
     if (user) els.forEach(el => el.textContent = user.nombre || user.email);
+
+    // Los accesos marcados con data-admin-only solo se muestran al administrador.
+    const esAdmin = !!user && user.rol === 'admin';
+    document.querySelectorAll('[data-admin-only]').forEach(el => { el.hidden = !esAdmin; });
   },
 };

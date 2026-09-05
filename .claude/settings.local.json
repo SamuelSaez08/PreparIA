@@ -57,7 +57,10 @@
       "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\samue\\\\OneDrive\\\\Escritorio\\\\IAprepar\" -Recurse -Directory -Filter \"*migration*\" -ErrorAction SilentlyContinue)",
       "PowerShell(Get-ChildItem -Path \"c:\\\\Users\\\\samue\\\\OneDrive\\\\Escritorio\\\\IAprepar\" -Force | Select-Object Name, @{Name=\"Type\";Expression={if\\($_.PSIsContainer\\){\"Dir\"}else{\"File\"}}} | Format-Table -AutoSize)",
       "PowerShell(Get-ChildItem -Path \"c:\\\\Users\\\\samue\\\\OneDrive\\\\Escritorio\\\\IAprepar\\\\IAprepar\" -Force | Select-Object Name, @{Name=\"Type\";Expression={if\\($_.PSIsContainer\\){\"Dir\"}else{\"File\"}}} | Format-Table -AutoSize)",
-      "PowerShell(Get-ChildItem -Path \"c:\\\\Users\\\\samue\\\\OneDrive\\\\Escritorio\\\\IAprepar\\\\IAprepar\\\\Backend\" -Recurse -Force | Select-Object Name, @{Name=\"Type\";Expression={if\\($_.PSIsContainer\\){\"Dir\"}else{\"File\"}}} | Format-Table -AutoSize)"
+      "PowerShell(Get-ChildItem -Path \"c:\\\\Users\\\\samue\\\\OneDrive\\\\Escritorio\\\\IAprepar\\\\IAprepar\\\\Backend\" -Recurse -Force | Select-Object Name, @{Name=\"Type\";Expression={if\\($_.PSIsContainer\\){\"Dir\"}else{\"File\"}}} | Format-Table -AutoSize)",
+      "Bash(timeout 15 npm run dev)",
+      "Bash(timeout 12 npm run dev)",
+      "PowerShell($proc = Get-NetTCPConnection -LocalPort 3000 -State Listen -ErrorAction SilentlyContinue | Select-Object -First 1; if \\($proc\\) { Stop-Process -Id $proc.OwningProcess -Force; Write-Output \"Proceso en puerto 3000 terminado \\(PID $\\($proc.OwningProcess\\)\\)\" } else { Write-Output \"Puerto 3000 libre\" })"
     ]
   }
 }

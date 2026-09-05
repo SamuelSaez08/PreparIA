@@ -21,6 +21,7 @@ document.addEventListener('DOMContentLoaded', () => {
     'estadisticas': typeof PageEstadisticas !== 'undefined' ? PageEstadisticas : null,
     'ciencias-sociales': typeof PageCienciasSociales !== 'undefined' ? PageCienciasSociales : null,
     'nodo': typeof PageNodo !== 'undefined' ? PageNodo : null,
+    'admin': typeof PageAdmin !== 'undefined' ? PageAdmin : null,
     'ranking': { init() { /* RankingPage.init() is called by ranking.js */ } },
   };
   /* eslint-enable no-undef */

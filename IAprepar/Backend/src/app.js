@@ -2,6 +2,8 @@
 
 require('dotenv').config();
 
+const path     = require('path');
+const fs       = require('fs');
 const express  = require('express');
 const helmet   = require('helmet');
 const cors     = require('cors');
@@ -87,6 +89,21 @@ app.get('/', (_req, res) => {
 
 // ── API v1
 app.use('/api/v1', routes);
+
+// ── Frontend estático
+// En desarrollo local el mismo servidor sirve la interfaz, de modo que
+// http://localhost:3000/login.html funciona sin necesidad de Live Server ni de
+// ningún otro servidor aparte. En producción el frontend lo sirve Vercel y esta
+// carpeta no existe junto al backend, así que el bloque simplemente no se activa.
+const RUTA_FRONTEND = path.join(__dirname, '..', '..', 'Frontend');
+
+if (fs.existsSync(RUTA_FRONTEND)) {
+  app.use(express.static(RUTA_FRONTEND, {
+    extensions: ['html'],   // /login → /login.html
+    index: false,           // la raíz sigue devolviendo la información de la API
+  }));
+  logger.info(`🖥️  Frontend servido desde este mismo servidor: http://localhost:${process.env.PORT || 3000}/login.html`);
+}
 
 // ── 404
 app.use(notFoundHandler);

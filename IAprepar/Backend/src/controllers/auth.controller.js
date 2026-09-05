@@ -4,13 +4,24 @@ const { validationResult } = require('express-validator');
 const authService = require('../services/auth.service');
 const { ok, created, fail } = require('../utils/response');
 
+const _validar = (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    fail(res, errors.array()[0].msg, 400, errors.array());
+    return false;
+  }
+  return true;
+};
+
 const register = async (req, res, next) => {
   try {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return fail(res, errors.array()[0].msg, 400, errors.array());
-    }
-    const result = await authService.register(req.body);
+    if (!_validar(req, res)) return;
+
+    const result = await authService.register({
+      ...req.body,
+      ip:        req.ip,
+      userAgent: req.headers['user-agent'],
+    });
     return created(res, 'Cuenta creada exitosamente.', result);
   } catch (err) {
     if (err.statusCode) return fail(res, err.message, err.statusCode);
@@ -20,14 +31,12 @@ const register = async (req, res, next) => {
 
 const login = async (req, res, next) => {
   try {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return fail(res, errors.array()[0].msg, 400, errors.array());
-    }
+    if (!_validar(req, res)) return;
+
     const { email, password } = req.body;
     const result = await authService.login({
       email, password,
-      ip: req.ip,
+      ip:        req.ip,
       userAgent: req.headers['user-agent'],
     });
     return ok(res, 'Inicio de sesión exitoso.', result);
@@ -46,4 +55,17 @@ const logout = async (req, res, next) => {
   }
 };
 
-module.exports = { register, login, logout };
+const cambiarPassword = async (req, res, next) => {
+  try {
+    if (!_validar(req, res)) return;
+
+    const { password_actual, password_nueva } = req.body;
+    const result = await authService.cambiarPassword(req.user.id_usuario, password_actual, password_nueva);
+    return ok(res, 'Contraseña actualizada. Inicia sesión de nuevo.', result);
+  } catch (err) {
+    if (err.statusCode) return fail(res, err.message, err.statusCode);
+    next(err);
+  }
+};
+
+module.exports = { register, login, logout, cambiarPassword };

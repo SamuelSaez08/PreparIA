@@ -10,6 +10,7 @@
     "migrate:rollback": "knex migrate:rollback",
     "migrate:status": "knex migrate:status",
     "seed": "knex seed:run",
+    "admin": "node scripts/crear-admin.js",
     "db:reset": "node scripts/reset-db.js",
     "db:seed-users": "node scripts/seed-users.js",
     "db:backfill": "node scripts/backfill_gamification.js"

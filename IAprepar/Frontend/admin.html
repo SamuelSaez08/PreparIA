@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PreparIA — Panel de administración</title>
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛠️</text></svg>">
+  <link rel="stylesheet" href="css/styles.css?v=2">
+  <style>
+    .admin-tabs {
+      display: flex; flex-wrap: wrap; gap: 8px;
+      border-bottom: 2px solid rgba(245,245,240,0.12);
+      margin-bottom: 28px; padding-bottom: 0;
+    }
+    .admin-tab {
+      background: none; border: none; cursor: pointer;
+      color: rgba(245,245,240,0.55);
+      font-family: var(--font); font-weight: 700; font-size: 0.95rem;
+      padding: 12px 18px; border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+      border-bottom: 3px solid transparent;
+      transition: all var(--transition);
+    }
+    .admin-tab:hover { color: var(--white); background: rgba(245,245,240,0.05); }
+    .admin-tab.active { color: var(--acid); border-bottom-color: var(--acid); }
+
+    .admin-panel[hidden] { display: none !important; }
+
+    .toolbar {
+      display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end;
+      margin-bottom: 20px;
+    }
+    .toolbar .input-group { margin: 0; flex: 1 1 200px; min-width: 160px; }
+    .toolbar label { font-size: 0.875rem; }
+
+    .tabla-wrap {
+      overflow-x: auto;
+      border: 2px solid rgba(245,245,240,0.12);
+      border-radius: var(--radius-md);
+      background: var(--ink-soft);
+    }
+    table.admin-table { border-collapse: collapse; width: 100%; min-width: 720px; }
+    table.admin-table th {
+      text-align: left; font-size: 0.875rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.06em;
+      color: rgba(245,245,240,0.5);
+      padding: 14px 16px; border-bottom: 2px solid rgba(245,245,240,0.12);
+      white-space: nowrap;
+    }
+    table.admin-table td {
+      padding: 14px 16px; font-size: 0.92rem;
+      border-bottom: 1px solid rgba(245,245,240,0.07);
+      vertical-align: top;
+    }
+    table.admin-table tr:last-child td { border-bottom: none; }
+    table.admin-table tr:hover td { background: rgba(245,245,240,0.03); }
+
+    .pill {
+      display: inline-block; padding: 4px 10px; border-radius: 100px;
+      font-size: 0.875rem; font-weight: 700; white-space: nowrap;
+    }
+    .pill-ok    { background: var(--acid-glow); color: var(--acid); }
+    .pill-off   { background: rgba(255,107,107,0.16); color: var(--coral); }
+    .pill-admin { background: rgba(155,114,207,0.18); color: var(--violet); }
+    .pill-facil   { background: rgba(78,205,196,0.16); color: var(--sky); }
+    .pill-media   { background: rgba(255,217,61,0.16); color: var(--amber); }
+    .pill-dificil { background: rgba(255,107,107,0.16); color: var(--coral); }
+
+    .acciones { display: flex; gap: 8px; flex-wrap: wrap; }
+    .btn-mini {
+      font-size: 0.875rem; padding: 6px 12px; border-radius: var(--radius-sm);
+      border: 2px solid rgba(245,245,240,0.18); background: none;
+      color: var(--white); cursor: pointer; font-weight: 700;
+      font-family: var(--font); transition: all var(--transition);
+      white-space: nowrap;
+    }
+    .btn-mini:hover { border-color: var(--acid); color: var(--acid); }
+    .btn-mini.peligro:hover { border-color: var(--coral); color: var(--coral); }
+
+    .estado-vacio {
+      text-align: center; padding: 48px 24px;
+      color: rgba(245,245,240,0.5); font-size: 0.95rem;
+    }
+
+    .paginacion {
+      display: flex; justify-content: space-between; align-items: center;
+      gap: 16px; margin-top: 16px; flex-wrap: wrap;
+      font-size: 0.875rem; color: rgba(245,245,240,0.55);
+    }
+
+    .kpi-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 16px; margin-bottom: 28px;
+    }
+    .kpi {
+      background: var(--ink-soft); border: 2px solid rgba(245,245,240,0.1);
+      border-radius: var(--radius-md); padding: 20px;
+    }
+    .kpi .valor { font-size: 1.9rem; font-weight: 800; line-height: 1.1; color: var(--acid); }
+    .kpi .etiqueta {
+      font-size: 0.875rem; color: rgba(245,245,240,0.55);
+      font-weight: 600; margin-top: 6px;
+    }
+
+    .modal-form { display: flex; flex-direction: column; gap: 16px; }
+    .opciones-editor { display: flex; flex-direction: column; gap: 10px; }
+    .opcion-fila { display: flex; gap: 10px; align-items: center; }
+    .opcion-fila .letra {
+      width: 30px; height: 30px; flex-shrink: 0; border-radius: 50%;
+      background: var(--ink-muted); display: flex; align-items: center;
+      justify-content: center; font-weight: 800; font-size: 0.875rem;
+    }
+    .opcion-fila input[type=text] { flex: 1; }
+    .opcion-fila label {
+      display: flex; align-items: center; gap: 6px; font-size: 0.875rem;
+      white-space: nowrap; cursor: pointer;
+    }
+
+    .aviso-rol {
+      background: rgba(255,107,107,0.12); border: 2px solid var(--coral);
+      border-radius: var(--radius-md); padding: 24px; text-align: center;
+    }
+
+    @media (max-width: 768px) {
+      .admin-tab { font-size: 1rem; padding: 12px 14px; }
+      table.admin-table td, .pill, .btn-mini, .kpi .etiqueta,
+      .paginacion, .toolbar label { font-size: 1rem; }
+    }
+
+    @media print {
+      .navbar, .admin-tabs, .toolbar, .acciones, .paginacion, .no-imprimir { display: none !important; }
+      body { background: #fff; color: #000; }
+      .kpi, .tabla-wrap { border-color: #999; background: #fff; }
+      .kpi .valor { color: #000; }
+      table.admin-table td, table.admin-table th { color: #000; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── NAVBAR ── -->
+<nav class="navbar">
+  <div class="container">
+    <a href="index.html" class="nav-logo">Prepar<span>IA</span></a>
+    <div class="flex items-center gap-md">
+      <span class="pill pill-admin">Administrador</span>
+      <span style="font-size: 0.875rem;color:rgba(245,245,240,0.5)">Hola, <strong data-user-name style="color:var(--white)">Admin</strong></span>
+      <button id="logout-btn" class="btn btn-outline btn-sm">Salir</button>
+    </div>
+  </div>
+</nav>
+
+<main class="container" style="padding-top:32px;padding-bottom:64px">
+
+  <!-- Si el usuario no es administrador -->
+  <div id="sin-permiso" class="aviso-rol" hidden>
+    <h2 style="margin-bottom:12px">Esta sección es solo para administradores</h2>
+    <p style="margin-bottom:20px">Tu cuenta no tiene permisos para gestionar usuarios ni contenidos.</p>
+    <a href="dashboard.html" class="btn btn-primary">Volver a mi panel</a>
+  </div>
+
+  <div id="admin-contenido" hidden>
+
+    <header style="margin-bottom:28px">
+      <h1 style="font-size:clamp(1.7rem,4vw,2.4rem);margin-bottom:8px">Panel de administración</h1>
+      <p style="color:rgba(245,245,240,0.6);max-width:64ch">
+        Gestión de cuentas, banco de preguntas, material de estudio y reportes de rendimiento.
+      </p>
+    </header>
+
+    <div class="admin-tabs" role="tablist">
+      <button class="admin-tab active" data-panel="usuarios"  role="tab">Usuarios</button>
+      <button class="admin-tab"        data-panel="preguntas" role="tab">Preguntas</button>
+      <button class="admin-tab"        data-panel="material"  role="tab">Material</button>
+      <button class="admin-tab"        data-panel="reportes"  role="tab">Reportes</button>
+    </div>
+
+    <!-- ══════════ USUARIOS (RF-03) ══════════ -->
+    <section class="admin-panel" id="panel-usuarios">
+      <div class="toolbar">
+        <div class="input-group">
+          <label for="u-buscar">Buscar</label>
+          <input type="search" id="u-buscar" class="input-field" placeholder="Nombre o correo">
+        </div>
+        <div class="input-group">
+          <label for="u-rol">Rol</label>
+          <select id="u-rol" class="input-field">
+            <option value="">Todos</option>
+            <option value="estudiante">Estudiantes</option>
+            <option value="admin">Administradores</option>
+          </select>
+        </div>
+        <div class="input-group">
+          <label for="u-estado">Estado</label>
+          <select id="u-estado" class="input-field">
+            <option value="">Todos</option>
+            <option value="true">Activos</option>
+            <option value="false">Desactivados</option>
+          </select>
+        </div>
+        <button id="u-refrescar" class="btn btn-primary btn-sm">Buscar</button>
+      </div>
+
+      <div class="tabla-wrap">
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>Estudiante</th>
+              <th>Grado</th>
+              <th>Institución</th>
+              <th>Contacto</th>
+              <th>Simulacros</th>
+              <th>Estado</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="u-cuerpo">
+            <tr><td colspan="7" class="estado-vacio">Cargando usuarios…</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="paginacion">
+        <span id="u-conteo">—</span>
+        <span class="acciones">
+          <button class="btn-mini" id="u-anterior">← Anteriores</button>
+          <button class="btn-mini" id="u-siguiente">Siguientes →</button>
+        </span>
+      </div>
+    </section>
+
+    <!-- ══════════ PREGUNTAS (RF-04) ══════════ -->
+    <section class="admin-panel" id="panel-preguntas" hidden>
+      <div class="toolbar">
+        <div class="input-group">
+          <label for="p-buscar">Buscar en el enunciado</label>
+          <input type="search" id="p-buscar" class="input-field" placeholder="Ej: Constitución de 1991">
+        </div>
+        <div class="input-group">
+          <label for="p-dificultad">Dificultad</label>
+          <select id="p-dificultad" class="input-field">
+            <option value="">Todas</option>
+            <option value="facil">Fácil</option>
+            <option value="media">Media</option>
+            <option value="dificil">Difícil</option>
+          </select>
+        </div>
+        <button id="p-refrescar" class="btn btn-outline btn-sm">Buscar</button>
+        <button id="p-nueva" class="btn btn-primary btn-sm">+ Nueva pregunta</button>
+      </div>
+
+      <div class="tabla-wrap">
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>Enunciado</th>
+              <th>Nodo</th>
+              <th>Dificultad</th>
+              <th>Respuesta</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="p-cuerpo">
+            <tr><td colspan="5" class="estado-vacio">Cargando preguntas…</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="paginacion">
+        <span id="p-conteo">—</span>
+        <span class="acciones">
+          <button class="btn-mini" id="p-anterior">← Anteriores</button>
+          <button class="btn-mini" id="p-siguiente">Siguientes →</button>
+        </span>
+      </div>
+    </section>
+
+    <!-- ══════════ MATERIAL (RF-04) ══════════ -->
+    <section class="admin-panel" id="panel-material" hidden>
+      <div class="toolbar">
+        <div class="input-group">
+          <label for="m-nodo">Nodo de aprendizaje</label>
+          <select id="m-nodo" class="input-field">
+            <option value="">Todos los nodos</option>
+          </select>
+        </div>
+        <button id="m-refrescar" class="btn btn-outline btn-sm">Filtrar</button>
+        <button id="m-nuevo" class="btn btn-primary btn-sm">+ Nuevo material</button>
+      </div>
+
+      <div class="tabla-wrap">
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>Título</th>
+              <th>Nodo</th>
+              <th>Tipo</th>
+              <th>Enlace</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="m-cuerpo">
+            <tr><td colspan="5" class="estado-vacio">Cargando material…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ══════════ REPORTES (caso de uso 4.7) ══════════ -->
+    <section class="admin-panel" id="panel-reportes" hidden>
+      <div class="toolbar no-imprimir">
+        <div class="input-group">
+          <label for="r-desde">Desde</label>
+          <input type="date" id="r-desde" class="input-field">
+        </div>
+        <div class="input-group">
+          <label for="r-hasta">Hasta</label>
+          <input type="date" id="r-hasta" class="input-field">
+        </div>
+        <button id="r-generar"  class="btn btn-primary btn-sm">Generar reporte</button>
+        <button id="r-csv"      class="btn btn-outline btn-sm">Descargar CSV</button>
+        <button id="r-imprimir" class="btn btn-outline btn-sm">Imprimir / Guardar PDF</button>
+      </div>
+
+      <div id="r-resultado">
+        <p class="estado-vacio">Elige un rango de fechas y genera el reporte.</p>
+      </div>
+    </section>
+
+  </div>
+</main>
+
+<!-- ── MODAL: editar usuario ── -->
+<div class="modal-overlay" id="modal-usuario">
+  <div class="modal">
+    <button class="modal-close" data-close-modal="modal-usuario">✕</button>
+    <h3 style="margin-bottom:20px">Editar usuario</h3>
+    <form id="form-usuario" class="modal-form" novalidate>
+      <input type="hidden" id="uf-id">
+      <div class="input-group">
+        <label for="uf-nombre">Nombre</label>
+        <input type="text" id="uf-nombre" class="input-field">
+      </div>
+      <div class="input-group">
+        <label for="uf-apellido">Apellido</label>
+        <input type="text" id="uf-apellido" class="input-field">
+      </div>
+      <div class="input-group">
+        <label for="uf-grado">Grado</label>
+        <input type="text" id="uf-grado" class="input-field">
+      </div>
+      <div class="input-group">
+        <label for="uf-institucion">Institución educativa</label>
+        <input type="text" id="uf-institucion" class="input-field">
+      </div>
+      <div class="input-group">
+        <label for="uf-ciudad">Ciudad</label>
+        <input type="text" id="uf-ciudad" class="input-field">
+      </div>
+      <div class="input-group">
+        <label for="uf-telefono">Teléfono</label>
+        <input type="tel" id="uf-telefono" class="input-field">
+      </div>
+      <button type="submit" class="btn btn-primary w-full">Guardar cambios</button>
+    </form>
+  </div>
+</div>
+
+<!-- ── MODAL: pregunta ── -->
+<div class="modal-overlay" id="modal-pregunta">
+  <div class="modal" style="max-width:680px">
+    <button class="modal-close" data-close-modal="modal-pregunta">✕</button>
+    <h3 id="pf-titulo" style="margin-bottom:20px">Nueva pregunta</h3>
+    <form id="form-pregunta" class="modal-form" novalidate>
+      <input type="hidden" id="pf-id">
+      <div class="input-group">
+        <label for="pf-nodo">Nodo de aprendizaje</label>
+        <select id="pf-nodo" class="input-field"></select>
+      </div>
+      <div class="input-group">
+        <label for="pf-nivel">Nivel</label>
+        <select id="pf-nivel" class="input-field"></select>
+      </div>
+      <div class="input-group">
+        <label for="pf-dificultad">Dificultad</label>
+        <select id="pf-dificultad" class="input-field">
+          <option value="facil">Fácil</option>
+          <option value="media" selected>Media</option>
+          <option value="dificil">Difícil</option>
+        </select>
+      </div>
+      <div class="input-group">
+        <label for="pf-texto-base">Texto base <span style="opacity:.6;font-weight:400">(opcional: fuente, cita o contexto)</span></label>
+        <textarea id="pf-texto-base" class="input-field" rows="3"></textarea>
+      </div>
+      <div class="input-group">
+        <label for="pf-enunciado">Enunciado</label>
+        <textarea id="pf-enunciado" class="input-field" rows="3"></textarea>
+      </div>
+
+      <div class="input-group">
+        <label>Opciones <span style="opacity:.6;font-weight:400">(marca la correcta)</span></label>
+        <div class="opciones-editor" id="pf-opciones"></div>
+      </div>
+
+      <div class="input-group">
+        <label for="pf-explicacion">Explicación de la respuesta</label>
+        <textarea id="pf-explicacion" class="input-field" rows="3"></textarea>
+      </div>
+
+      <button type="submit" class="btn btn-primary w-full">Guardar pregunta</button>
+    </form>
+  </div>
+</div>
+
+<!-- ── MODAL: material ── -->
+<div class="modal-overlay" id="modal-material">
+  <div class="modal">
+    <button class="modal-close" data-close-modal="modal-material">✕</button>
+    <h3 id="mf-titulo" style="margin-bottom:20px">Nuevo material</h3>
+    <form id="form-material" class="modal-form" novalidate>
+      <input type="hidden" id="mf-id">
+      <div class="input-group">
+        <label for="mf-nodo">Nodo de aprendizaje</label>
+        <select id="mf-nodo" class="input-field"></select>
+      </div>
+      <div class="input-group">
+        <label for="mf-titulo-campo">Título</label>
+        <input type="text" id="mf-titulo-campo" class="input-field">
+      </div>
+      <div class="input-group">
+        <label for="mf-tipo">Tipo</label>
+        <select id="mf-tipo" class="input-field">
+          <option value="texto">Texto</option>
+          <option value="video">Video</option>
+          <option value="pdf">PDF</option>
+          <option value="imagen">Imagen</option>
+          <option value="enlace">Enlace</option>
+          <option value="ejercicio">Ejercicio</option>
+        </select>
+      </div>
+      <div class="input-group">
+        <label for="mf-url">Enlace <span style="opacity:.6;font-weight:400">(opcional)</span></label>
+        <input type="url" id="mf-url" class="input-field" placeholder="https://…">
+      </div>
+      <div class="input-group">
+        <label for="mf-contenido">Contenido</label>
+        <textarea id="mf-contenido" class="input-field" rows="6"></textarea>
+      </div>
+      <button type="submit" class="btn btn-primary w-full">Guardar material</button>
+    </form>
+  </div>
+</div>
+
+<script src="js/config.js?v=1.0.3"></script>
+<script src="js/api.js?v=1.0.3"></script>
+<script src="js/state.js?v=1.0.3"></script>
+<script src="js/ui.js?v=1.0.3"></script>
+<script src="js/pages/page-admin.js?v=1.0.3"></script>
+<script src="js/app.js?v=1.0.3"></script>
+</body>
+</html>

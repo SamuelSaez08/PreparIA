@@ -38,7 +38,7 @@
       padding: 16px;
     }
     .sim-info-item .val { font-size: 1.5rem; font-weight: 800; color: var(--acid); }
-    .sim-info-item .lbl { font-size: 0.75rem; color: rgba(245,245,240,0.45); font-weight: 600; margin-top: 4px; }
+    .sim-info-item .lbl { font-size: 0.875rem; color: rgba(245,245,240,0.45); font-weight: 600; margin-top: 4px; }
     .quiz-header {
       display: flex; align-items: center; justify-content: space-between;
       background: var(--ink-soft); border: 2px solid rgba(245,245,240,0.1);
@@ -120,7 +120,7 @@
     .reco-card-header { display:flex;gap:12px;align-items:flex-start }
     .reco-card-icon { font-size:1.3rem;flex-shrink:0;margin-top:2px }
     .reco-card-name { font-weight:800;font-size:0.9rem;color:var(--acid);margin-bottom:4px }
-    .reco-card-tip { font-size:0.86rem;color:rgba(245,245,240,0.72);line-height:1.6 }
+    .reco-card-tip { font-size: 0.875rem;color:rgba(245,245,240,0.72);line-height:1.6 }
     .accordion-item { background:var(--ink-soft);border-radius:var(--radius-md);margin-bottom:7px;overflow:hidden;border:2px solid rgba(245,245,240,0.07) }
     .accordion-item.incorrect { border-color:rgba(255,107,107,0.35) }
     .accordion-item.correct   { border-color:rgba(191,255,0,0.18) }
@@ -134,15 +134,15 @@
     .accordion-item.open .accordion-body { display:block }
     .answer-comparison { display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0 }
     @media(max-width:520px){.answer-comparison{grid-template-columns:1fr}}
-    .answer-box { border-radius:var(--radius-sm);padding:10px 13px;font-size:0.82rem;line-height:1.5 }
+    .answer-box { border-radius:var(--radius-sm);padding:10px 13px;font-size: 0.875rem;line-height:1.5 }
     .answer-box.wrong-ans { background:rgba(255,107,107,0.08);border:1px solid rgba(255,107,107,0.3) }
     .answer-box.right-ans { background:rgba(191,255,0,0.06);border:1px solid rgba(191,255,0,0.25) }
     .answer-box .ans-label { font-weight:800;margin-bottom:3px;font-size:0.68rem;text-transform:uppercase;letter-spacing:0.06em }
     .wrong-ans .ans-label { color:var(--coral) }
     .right-ans .ans-label { color:var(--acid) }
-    .error-badge { display:inline-block;padding:3px 9px;border-radius:20px;font-size:0.75rem;font-weight:700;background:rgba(255,107,107,0.12);color:var(--coral);border:1px solid rgba(255,107,107,0.35);margin:6px 4px 6px 0 }
-    .concepto-badge { display:inline-block;padding:3px 9px;border-radius:20px;font-size:0.75rem;font-weight:700;background:rgba(191,255,0,0.1);color:var(--acid);border:1px solid rgba(191,255,0,0.35);margin:6px 4px 6px 0 }
-    .explicacion-block { background:var(--ink-muted);border-radius:var(--radius-sm);padding:12px 14px;font-size:0.86rem;line-height:1.75;color:rgba(245,245,240,0.8);white-space:pre-line;margin-top:10px }
+    .error-badge { display:inline-block;padding:3px 9px;border-radius:20px;font-size: 0.875rem;font-weight:700;background:rgba(255,107,107,0.12);color:var(--coral);border:1px solid rgba(255,107,107,0.35);margin:6px 4px 6px 0 }
+    .concepto-badge { display:inline-block;padding:3px 9px;border-radius:20px;font-size: 0.875rem;font-weight:700;background:rgba(191,255,0,0.1);color:var(--acid);border:1px solid rgba(191,255,0,0.35);margin:6px 4px 6px 0 }
+    .explicacion-block { background:var(--ink-muted);border-radius:var(--radius-sm);padding:12px 14px;font-size: 0.875rem;line-height:1.75;color:rgba(245,245,240,0.8);white-space:pre-line;margin-top:10px }
     .result-actions { display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:36px;padding-bottom:40px }
   </style>
 </head>
@@ -153,7 +153,7 @@
   <div class="container">
     <a href="index.html" class="nav-logo">Prepar<span>IA</span></a>
     <div class="flex items-center gap-md">
-      <span style="font-size:0.85rem;color:rgba(245,245,240,0.5)">Hola, <strong data-user-name style="color:var(--white)">Estudiante</strong></span>
+      <span style="font-size: 0.875rem;color:rgba(245,245,240,0.5)">Hola, <strong data-user-name style="color:var(--white)">Estudiante</strong></span>
       <button id="logout-btn" class="btn btn-outline btn-sm">Salir</button>
     </div>
   </div>
@@ -229,7 +229,7 @@
       <!-- Header with timer and progress -->
       <div class="quiz-header">
         <div>
-          <div class="muted" style="font-size:0.75rem;font-weight:800;text-transform:uppercase;letter-spacing:0.08em">Progreso</div>
+          <div class="muted" style="font-size: 0.875rem;font-weight:800;text-transform:uppercase;letter-spacing:0.08em">Progreso</div>
           <div style="font-size:1.1rem;font-weight:800" id="q-progress">1 / 10</div>
         </div>
         <div style="flex:1;max-width:300px">
@@ -342,7 +342,7 @@
         <div id="ia-loading" class="hidden text-center py-xl">
           <div style="font-size:3rem;animation:bounce 1s infinite alternate">🤖</div>
           <h4 class="mt-md accent">Gemini está trabajando...</h4>
-          <p class="muted" style="font-size:0.85rem">Generando preguntas y validando opciones.<br>Esto puede tardar unos 10-20 segundos.</p>
+          <p class="muted" style="font-size: 0.875rem">Generando preguntas y validando opciones.<br>Esto puede tardar unos 10-20 segundos.</p>
           <div class="progress-bar mt-md w-full" style="height:6px;overflow:hidden">
             <div class="progress-fill" style="width:100%; animation: pulse 1s infinite alternate; background:#E040FB"></div>
           </div>

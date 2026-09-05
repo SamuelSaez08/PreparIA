@@ -2,38 +2,28 @@
 
 require('dotenv').config();
 
-// Configuración de Knex para migraciones y seeds de PreparIA
+const { getConnectionString, getSslConfig } = require('./src/config/dbUrl');
+
+// Misma resolución de conexión que usa el servidor: DATABASE_URL, o el grupo
+// PG*, o el grupo DB_*. El SSL se activa solo cuando el host no es local.
+const base = {
+  client: 'pg',
+  connection: {
+    connectionString: getConnectionString(),
+    ssl: getSslConfig(),
+  },
+  pool: { min: 0, max: 10 },
+  migrations: {
+    directory: './migrations',
+    tableName: 'knex_migrations',
+  },
+  seeds: {
+    directory: './seeds',
+  },
+};
+
 module.exports = {
-  development: {
-    client: 'pg',
-    connection: {
-      host:     process.env.PGHOST,
-      port:     parseInt(process.env.PGPORT || '6543', 10),
-      database: process.env.PGDATABASE,
-      user:     process.env.PGUSER,
-      password: process.env.PGPASSWORD,
-      ssl:      { rejectUnauthorized: false },
-    },
-    migrations: {
-      directory: './migrations',
-      tableName: 'knex_migrations',
-    },
-    seeds: {
-      directory: './seeds',
-    },
-  },
-  production: {
-    client: 'pg',
-    connection: {
-  connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false }
-},
-    migrations: {
-      directory: './migrations',
-      tableName: 'knex_migrations',
-    },
-    seeds: {
-      directory: './seeds',
-    },
-  },
+  development: base,
+  test:        base,
+  production:  base,
 };

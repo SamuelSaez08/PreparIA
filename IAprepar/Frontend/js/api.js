@@ -110,8 +110,18 @@ async function apiFetch(endpoint, options = {}) {
   // Handle 401 — unauthorized
   if (response.status === 401) {
     Session.clearSession();
+    // Guardamos el motivo para explicarlo en la pantalla de inicio de sesión
+    // (por ejemplo, cuando la sesión se cerró por inactividad).
+    try {
+      sessionStorage.setItem('preparia_motivo_salida', data.mensaje || 'Tu sesión expiró. Inicia sesión de nuevo.');
+    } catch { /* almacenamiento no disponible */ }
     window.location.href = 'login.html';
     throw { ok: false, status: 401, mensaje: data.mensaje || 'Sesión expirada. Inicia sesión de nuevo.' };
+  }
+
+  // Handle 403 — sin permisos (rol insuficiente)
+  if (response.status === 403) {
+    throw { ok: false, status: 403, mensaje: data.mensaje || 'No tienes permisos para esta acción.' };
   }
 
   // Handle non-ok responses
@@ -134,16 +144,18 @@ const AuthAPI = {
   /**
    * Registrar nuevo usuario
    */
-  async register(nombre, apellido, email, password, grado) {
+  async register(datos) {
     const res = await apiFetch('/auth/register', {
       method: 'POST',
       body: {
-        nombre,
-        apellido,
-        email,
-        password,
-        id_rol: 2, // Rol estudiante
-        grado,
+        nombre:      datos.nombre,
+        apellido:    datos.apellido || '',
+        email:       datos.email,
+        password:    datos.password,
+        grado:       datos.grado,
+        institucion: datos.institucion,   // RF-02
+        ciudad:      datos.ciudad || '',  // RF-02
+        telefono:    datos.telefono,      // RF-02
       },
     });
 
@@ -185,6 +197,16 @@ const AuthAPI = {
     }
     Session.clearSession();
     window.location.href = 'login.html';
+  },
+
+  /**
+   * Cambiar la contraseña propia. Cierra la sesión al terminar.
+   */
+  async cambiarPassword(passwordActual, passwordNueva) {
+    return apiFetch('/auth/password', {
+      method: 'PUT',
+      body: { password_actual: passwordActual, password_nueva: passwordNueva },
+    });
   },
 };
 
@@ -326,19 +348,26 @@ const ProgresoAPI = {
    9. ExamenNivelAPI — Examen de nivelación
 ────────────────────────────────────────────────────────── */
 const ExamenNivelAPI = {
+  /** Devuelve el examen en curso o genera uno nuevo con preguntas fijas. */
   async getExamen(idMateria) {
     return apiFetch(`/examen-nivel?materia=${idMateria}`);
   },
 
-  async responder(idExamen, idPregunta, idOpcion) {
+  /**
+   * Entrega el examen completo para su calificación.
+   * @param {number} idExamen
+   * @param {Array<{id_pregunta:number,id_opcion:number}>} respuestas
+   */
+  async responder(idExamen, respuestas) {
     return apiFetch('/examen-nivel/responder', {
       method: 'POST',
-      body: {
-        id_examen:  idExamen,
-        id_pregunta: idPregunta,
-        id_opcion:  idOpcion,
-      },
+      body: { id_examen: idExamen, respuestas },
     });
+  },
+
+  /** Último nivel asignado al estudiante en esa materia. */
+  async getResultado(idMateria) {
+    return apiFetch(`/examen-nivel/resultado?materia=${idMateria}`);
   },
 };
 
@@ -381,5 +410,143 @@ const RankingAPI = {
 
   async getUserStats(userId) {
     return apiFetch(`/usuarios/${userId}/stats`);
+  },
+};
+
+/* ──────────────────────────────────────────────────────────
+   12. AdminAPI — Panel de administración
+   RF-03 (gestión de perfiles), RF-04 (gestión de contenidos)
+   y caso de uso 4.7 (generación de reportes).
+   Todas las rutas exigen rol 'admin' en el backend.
+────────────────────────────────────────────────────────── */
+const AdminAPI = {
+
+  // ── Usuarios (RF-03) ────────────────────────────────────
+  usuarios: {
+    async listar({ q = '', rol = '', activo = '', limit = 25, offset = 0 } = {}) {
+      const query = new URLSearchParams();
+      if (q)      query.set('q', q);
+      if (rol)    query.set('rol', rol);
+      if (activo !== '') query.set('activo', activo);
+      query.set('limit', limit);
+      query.set('offset', offset);
+      return apiFetch(`/usuarios?${query.toString()}`);
+    },
+
+    async detalle(id) {
+      return apiFetch(`/usuarios/${id}`);
+    },
+
+    async actualizar(id, datos) {
+      return apiFetch(`/usuarios/${id}`, { method: 'PUT', body: datos });
+    },
+
+    async cambiarEstado(id, activo) {
+      return apiFetch(`/usuarios/${id}/estado`, { method: 'PATCH', body: { activo } });
+    },
+
+    async eliminar(id) {
+      return apiFetch(`/usuarios/${id}`, { method: 'DELETE' });
+    },
+  },
+
+  // ── Banco de preguntas (RF-04) ──────────────────────────
+  preguntas: {
+    async listar({ q = '', nodo = '', nivel = '', dificultad = '', limit = 25, offset = 0 } = {}) {
+      const query = new URLSearchParams();
+      if (q)          query.set('q', q);
+      if (nodo)       query.set('nodo', nodo);
+      if (nivel)      query.set('nivel', nivel);
+      if (dificultad) query.set('dificultad', dificultad);
+      query.set('limit', limit);
+      query.set('offset', offset);
+      return apiFetch(`/preguntas?${query.toString()}`);
+    },
+
+    async detalle(id) {
+      return apiFetch(`/preguntas/${id}`);
+    },
+
+    async crear(datos) {
+      return apiFetch('/preguntas', { method: 'POST', body: datos });
+    },
+
+    async editar(id, datos) {
+      return apiFetch(`/preguntas/${id}`, { method: 'PUT', body: datos });
+    },
+
+    async retirar(id) {
+      return apiFetch(`/preguntas/${id}`, { method: 'DELETE' });
+    },
+  },
+
+  // ── Material de estudio (RF-04) ─────────────────────────
+  material: {
+    async listar({ nodo = '', limit = 50, offset = 0 } = {}) {
+      const query = new URLSearchParams();
+      if (nodo) query.set('nodo', nodo);
+      query.set('limit', limit);
+      query.set('offset', offset);
+      return apiFetch(`/material?${query.toString()}`);
+    },
+
+    async crear(datos) {
+      return apiFetch('/material', { method: 'POST', body: datos });
+    },
+
+    async editar(id, datos) {
+      return apiFetch(`/material/${id}`, { method: 'PUT', body: datos });
+    },
+
+    async retirar(id) {
+      return apiFetch(`/material/${id}`, { method: 'DELETE' });
+    },
+  },
+
+  // ── Reportes (caso de uso 4.7) ──────────────────────────
+  reportes: {
+    async generar({ tipo = 'progreso_general', desde = '', hasta = '' } = {}) {
+      const query = new URLSearchParams({ tipo });
+      if (desde) query.set('desde', desde);
+      if (hasta) query.set('hasta', hasta);
+      return apiFetch(`/reportes?${query.toString()}`);
+    },
+
+    /**
+     * Descarga el reporte en CSV. No usa apiFetch porque la respuesta no es
+     * JSON: hay que construir la petición y el enlace de descarga a mano.
+     */
+    async descargarCsv({ tipo = 'progreso_general', desde = '', hasta = '' } = {}) {
+      const query = new URLSearchParams({ tipo, formato: 'csv' });
+      if (desde) query.set('desde', desde);
+      if (hasta) query.set('hasta', hasta);
+
+      const respuesta = await fetch(`${API_BASE_URL}/reportes?${query.toString()}`, {
+        headers: { Authorization: `Bearer ${Session.getToken()}` },
+      });
+
+      if (!respuesta.ok) {
+        throw { ok: false, status: respuesta.status, mensaje: 'No se pudo generar el archivo.' };
+      }
+
+      const blob = await respuesta.blob();
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement('a');
+      a.href     = url;
+      a.download = `preparia_${tipo}_${new Date().toISOString().slice(0, 10)}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    },
+
+    async historial() {
+      return apiFetch('/reportes/historial');
+    },
+  },
+
+  // ── Catálogo auxiliar ───────────────────────────────────
+  async getNodos(idMateria = 1) {
+    return apiFetch(`/nodos?materia=${idMateria}`);
   },
 };
