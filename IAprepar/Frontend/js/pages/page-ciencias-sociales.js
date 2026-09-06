@@ -59,6 +59,10 @@ const PageCienciasSociales = {
       btnArbol.classList.toggle('activa', vista === 'arbol');
       btnRuta.setAttribute('aria-selected', String(vista === 'ruta'));
       btnArbol.setAttribute('aria-selected', String(vista === 'arbol'));
+
+      // Con la vista oculta los nodos miden 0: hay que redibujar el trazo
+      // en cuanto vuelve a ser visible.
+      if (vista === 'ruta') requestAnimationFrame(() => RutaAprendizaje.refrescar());
     };
 
     btnRuta.addEventListener('click', () => aplicar('ruta'));

@@ -724,6 +724,44 @@ const _mensajeGlobal = (porcentaje) => {
   return 'Hay varias áreas que necesitan refuerzo. ¡Usa el árbol de aprendizaje para repasar!';
 };
 
+/**
+ * Elige los temas que cubrirá un simulacro general y cuántas preguntas toca
+ * a cada uno. Se prefieren las hojas del árbol (los temas concretos) sobre
+ * las categorías, y se limita el número de temas para no disparar las
+ * peticiones a la IA.
+ */
+const _elegirNodosParaSimulacro = async (idMateria, cantidad) => {
+  const MAX_TEMAS = parseInt(process.env.IA_TEMAS_POR_SIMULACRO || '4', 10);
+
+  const { rows } = await db.query(
+    `SELECT n.id, n.nombre
+     FROM nodo_aprendizaje n
+     WHERE n.id_materia = $1
+       AND n.activo = true
+       AND NOT EXISTS (
+         SELECT 1 FROM nodo_aprendizaje h
+         WHERE h.id_padre = n.id AND h.activo = true
+       )
+     ORDER BY random()
+     LIMIT $2`,
+    [idMateria, MAX_TEMAS]
+  );
+
+  if (!rows.length) return [];
+
+  // Reparto: base para todos y el resto a los primeros.
+  const total  = Math.min(rows.length, Math.max(1, cantidad));
+  const usados = rows.slice(0, total);
+  const base   = Math.floor(cantidad / total);
+  const sobra  = cantidad % total;
+
+  return usados.map((n, i) => ({
+    id: n.id,
+    nombre: n.nombre,
+    cantidad: base + (i < sobra ? 1 : 0),
+  })).filter(n => n.cantidad > 0);
+};
+
 /* ─────────────────────────────────────────────────────────────────────────────
    GENERACIÓN DE SIMULACRO COMPLETO
 ───────────────────────────────────────────────────────────────────────────── */
@@ -742,32 +780,84 @@ const generarSimulacroCompleto = async (opciones) => {
     if (comp) nivelIdPorCompetencia[comp] = row.id;
   }
 
-  let nodo = 'Temas Generales';
+  const nivelSimulacro = 'Mixto (distribución ICFES Saber 11)';
+  const contextData = { id_usuario: id_usuario_admin, id_materia, id_nodo };
+  let todasPreguntas = [];
+
   if (id_nodo) {
-    const { rows: nRows } = await db.query('SELECT nombre FROM nodo_aprendizaje WHERE id = $1', [id_nodo]);
-    if (nRows.length) nodo = nRows[0].nombre;
+    // ── Simulacro de un tema concreto ────────────────────────────────────
+    // Viene de "Practicar este tema" en la ruta de aprendizaje.
+    const { rows: nRows } = await db.query(
+      'SELECT nombre FROM nodo_aprendizaje WHERE id = $1', [id_nodo]
+    );
+    const nodo = nRows.length ? nRows[0].nombre : 'Temas Generales';
+    const distr = _getDificultadStats(cantidad, mezclar_dificultad);
+
+    const lotes = await Promise.all(
+      ['facil', 'media', 'dificil']
+        .filter(d => distr[d] > 0)
+        .map(d => generarPreguntas(
+          { materia, nodo, subtema: '', nivel: nivelSimulacro, descripcion_nivel: null,
+            dificultad: d, cantidad: distr[d], tipo: 'seleccion_multiple' }, contextData)
+          .then(ps => ps.map(q => ({ ...q, _dificultadDB: d, _idNodo: id_nodo }))))
+    );
+    todasPreguntas = _shuffle(lotes.flat()).slice(0, cantidad);
+
+  } else {
+    // ── Simulacro general repartido entre los temas de la materia ────────
+    // Antes se generaba todo bajo el rótulo "Temas Generales" y las
+    // preguntas quedaban sin nodo, así que ningún simulacro alimentaba el
+    // progreso por tema. Ahora se eligen temas reales del árbol y cada
+    // pregunta nace sabiendo a cuál pertenece.
+    const nodos = await _elegirNodosParaSimulacro(id_materia, cantidad);
+
+    if (!nodos.length) {
+      // Materia sin árbol cargado: se conserva el comportamiento anterior
+      // en vez de fallar, aunque el progreso por tema no pueda calcularse.
+      logger.warn(`[ia.service] La materia ${id_materia} no tiene nodos; el simulacro no podrá atribuirse por tema.`);
+      const distr = _getDificultadStats(cantidad, mezclar_dificultad);
+      const lotes = await Promise.all(
+        ['facil', 'media', 'dificil']
+          .filter(d => distr[d] > 0)
+          .map(d => generarPreguntas(
+            { materia, nodo: 'Temas Generales', subtema: '', nivel: nivelSimulacro,
+              descripcion_nivel: null, dificultad: d, cantidad: distr[d], tipo: 'seleccion_multiple' }, contextData)
+            .then(ps => ps.map(q => ({ ...q, _dificultadDB: d, _idNodo: null }))))
+      );
+      todasPreguntas = _shuffle(lotes.flat()).slice(0, cantidad);
+
+    } else {
+      // Una llamada por tema. La dificultad rota entre temas para que la
+      // mezcla global se acerque a la distribución del ICFES sin disparar
+      // el número de peticiones a la IA.
+      const ROTACION = ['media', 'facil', 'media', 'dificil'];
+
+      const lotes = await Promise.all(
+        nodos.map((n, i) => {
+          const dificultad = mezclar_dificultad === false
+            ? 'media'
+            : ROTACION[i % ROTACION.length];
+
+          return generarPreguntas(
+            { materia, nodo: n.nombre, subtema: '', nivel: nivelSimulacro,
+              descripcion_nivel: null, dificultad, cantidad: n.cantidad, tipo: 'seleccion_multiple' },
+            { ...contextData, id_nodo: n.id })
+            .then(ps => ps.map(q => ({ ...q, _dificultadDB: dificultad, _idNodo: n.id })))
+            .catch((err) => {
+              // Que falle un tema no debe tumbar el simulacro entero.
+              logger.error(`[ia.service] Falló la generación del tema "${n.nombre}": ${err.message}`);
+              return [];
+            });
+        })
+      );
+      todasPreguntas = _shuffle(lotes.flat()).slice(0, cantidad);
+    }
   }
 
-  const distr = _getDificultadStats(cantidad, mezclar_dificultad);
-  const contextData = { id_usuario: id_usuario_admin, id_materia, id_nodo };
-  const nivelSimulacro = 'Mixto (distribución ICFES Saber 11)';
+  if (!todasPreguntas.length) {
+    throw new Error('La IA no devolvió ninguna pregunta válida. Intenta de nuevo en un momento.');
+  }
 
-  const [pFacil, pMedia, pDificil] = await Promise.all([
-    distr.facil > 0
-      ? generarPreguntas({ materia, nodo, subtema: '', nivel: nivelSimulacro, descripcion_nivel: null, dificultad: 'facil', cantidad: distr.facil, tipo: 'seleccion_multiple' }, contextData)
-        .then(p => p.map(q => ({ ...q, _dificultadDB: 'facil' })))
-      : Promise.resolve([]),
-    distr.media > 0
-      ? generarPreguntas({ materia, nodo, subtema: '', nivel: nivelSimulacro, descripcion_nivel: null, dificultad: 'media', cantidad: distr.media, tipo: 'seleccion_multiple' }, contextData)
-        .then(p => p.map(q => ({ ...q, _dificultadDB: 'media' })))
-      : Promise.resolve([]),
-    distr.dificil > 0
-      ? generarPreguntas({ materia, nodo, subtema: '', nivel: nivelSimulacro, descripcion_nivel: null, dificultad: 'dificil', cantidad: distr.dificil, tipo: 'seleccion_multiple' }, contextData)
-        .then(p => p.map(q => ({ ...q, _dificultadDB: 'dificil' })))
-      : Promise.resolve([]),
-  ]);
-
-  let todasPreguntas = _shuffle([...pFacil, ...pMedia, ...pDificil]).slice(0, cantidad);
   _validarDistribucionCompetencias(todasPreguntas, todasPreguntas.length);
 
   return await db.transaction(async (client) => {
@@ -779,7 +869,8 @@ const generarSimulacroCompleto = async (opciones) => {
     const idSimulacro = sRows[0].id;
 
     console.time('batch-insert-simulacro');
-    const idNodos = todasPreguntas.map(() => id_nodo || null);
+    // El nodo ya no es global: cada pregunta trae el suyo desde su generación.
+    const idNodos = todasPreguntas.map(q => q._idNodo || id_nodo || null);
     const idNiveles = todasPreguntas.map(p =>
       (p.competencia && nivelIdPorCompetencia[p.competencia]) ? nivelIdPorCompetencia[p.competencia] : id_nivel
     );

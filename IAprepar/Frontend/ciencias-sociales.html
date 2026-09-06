@@ -190,16 +190,16 @@
 
     /* ══════════════════════════════════════════════════════════
        RUTA DE APRENDIZAJE
-       Camino vertical en zigzag. El color comunica dominio, no
-       permiso: aquí no se bloquea nada, todo tema es accesible.
+       Camino en curva con nodos de vidrio. El color comunica
+       dominio, no permiso: aquí no se bloquea nada, y por eso
+       ningún nodo lleva candado.
        ══════════════════════════════════════════════════════════ */
     .vista-toggle {
       display: inline-flex;
       background: var(--ink-soft);
       border: 2px solid rgba(245,245,240,0.12);
       border-radius: 100px;
-      padding: 4px;
-      gap: 4px;
+      padding: 4px; gap: 4px;
     }
     .vista-toggle button {
       border: none; background: none; cursor: pointer;
@@ -211,100 +211,137 @@
     .vista-toggle button:hover { color: var(--white); }
     .vista-toggle button.activa { background: var(--acid); color: var(--ink); }
 
-    .ruta { max-width: 640px; margin: 0 auto; }
+    .ruta { max-width: 620px; margin: 0 auto; }
+    .ruta-etapa { margin-bottom: 60px; }
 
-    .ruta-etapa { margin-bottom: 56px; }
-
+    /* ── Banner de etapa ── */
     .ruta-banner {
       display: flex; align-items: center; justify-content: space-between;
       gap: 20px; flex-wrap: wrap;
       background: linear-gradient(135deg, var(--acid-dark), var(--acid));
       color: var(--ink);
       border-radius: var(--radius-lg);
-      padding: 20px 26px;
-      box-shadow: var(--shadow-clay);
-      position: sticky; top: 12px; z-index: 5;
+      padding: 18px 24px;
+      box-shadow: 0 10px 30px -12px rgba(191,255,0,0.45), inset 0 1px 0 rgba(255,255,255,0.35);
+      position: sticky; top: 12px; z-index: 6;
     }
     .ruta-banner-eyebrow {
-      font-size: 0.875rem; font-weight: 800; letter-spacing: 0.1em;
-      text-transform: uppercase; opacity: 0.62; margin: 0 0 2px;
+      font-size: 0.875rem; font-weight: 800; letter-spacing: 0.12em;
+      text-transform: uppercase; opacity: 0.6; margin: 0 0 2px;
     }
-    .ruta-banner h3 { font-size: 1.35rem; font-weight: 800; margin: 0; line-height: 1.2; }
+    .ruta-banner h3 { font-size: 1.3rem; font-weight: 800; margin: 0; line-height: 1.2; }
     .ruta-banner-avance { text-align: right; line-height: 1.1; }
     .ruta-banner-cifra { display: block; font-size: 1.6rem; font-weight: 800; font-variant-numeric: tabular-nums; }
-    .ruta-banner-pista { font-size: 0.875rem; font-weight: 700; opacity: 0.65; }
+    .ruta-banner-pista { font-size: 0.875rem; font-weight: 700; opacity: 0.62; }
 
+    /* ── Camino ── */
     .ruta-camino {
-      list-style: none; margin: 0; padding: 34px 0 0;
-      display: flex; flex-direction: column; align-items: center; gap: 34px;
+      list-style: none; margin: 0; padding: 44px 0 8px;
+      display: flex; flex-direction: column; align-items: center; gap: 40px;
+      position: relative;
+    }
+    .ruta-trazo {
+      position: absolute; inset: 0; z-index: 0;
+      pointer-events: none; overflow: visible;
+    }
+    .ruta-trazo .tramo {
+      fill: none; stroke-width: 13; stroke-linecap: round;
+    }
+    .ruta-trazo .tramo-halo {
+      fill: none; stroke: var(--acid); stroke-width: 24;
+      stroke-linecap: round; opacity: 0.14;
     }
 
     .ruta-paso {
-      display: flex; flex-direction: column; align-items: center; gap: 7px;
+      position: relative; z-index: 1;
+      display: flex; flex-direction: column; align-items: center; gap: 9px;
       transform: translateX(var(--x, 0));
-      position: relative;
-      max-width: 210px; text-align: center;
+      max-width: 200px; text-align: center;
     }
+    .ruta-paso:has(.siguiente) { margin-top: 16px; }
 
+    /* ── Nodo: tarjeta de vidrio con disco dentro ── */
     .ruta-nodo {
       position: relative;
-      width: 80px; height: 80px; border-radius: 50%;
-      border: none; cursor: pointer;
+      width: 92px; height: 92px;
+      border-radius: 26px;
+      cursor: pointer;
       display: flex; align-items: center; justify-content: center;
-      font-size: 1.9rem; line-height: 1;
-      background: var(--ink-muted);
-      color: var(--white);
-      box-shadow: 0 6px 0 rgba(0,0,0,0.45);
-      transition: transform 0.12s ease, box-shadow 0.12s ease;
+      background: rgba(245,245,240,0.06);
+      border: 1px solid rgba(245,245,240,0.14);
+      -webkit-backdrop-filter: blur(10px);
+      backdrop-filter: blur(10px);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.16), 0 10px 26px -14px rgba(0,0,0,0.9);
+      transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
     }
-    .ruta-nodo:hover  { transform: translateY(-3px); box-shadow: 0 9px 0 rgba(0,0,0,0.45); }
-    .ruta-nodo:active { transform: translateY(3px);  box-shadow: 0 2px 0 rgba(0,0,0,0.45); }
+    .ruta-nodo:hover {
+      transform: translateY(-4px);
+      border-color: rgba(245,245,240,0.3);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.2), 0 16px 30px -14px rgba(0,0,0,0.95);
+    }
+    .ruta-nodo:active { transform: translateY(0); }
     .ruta-nodo:focus-visible { outline: 3px solid var(--white); outline-offset: 4px; }
 
-    .ruta-nodo.dominado {
-      background: var(--acid); color: var(--ink);
-      box-shadow: 0 6px 0 var(--acid-dark);
-    }
-    .ruta-nodo.dominado:hover { box-shadow: 0 9px 0 var(--acid-dark); }
-
-    .ruta-nodo.progreso {
+    .ruta-disco {
+      position: relative;
+      width: 62px; height: 62px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.6rem; line-height: 1;
       background: var(--ink-muted);
-      border: 2px solid rgba(191,255,0,0.35);
+      color: var(--white);
+      box-shadow: 0 4px 0 rgba(0,0,0,0.5);
     }
-    .ruta-nodo.disponible { background: var(--ink-muted); }
-    .ruta-nodo.vacio {
-      background: rgba(245,245,240,0.05);
-      color: rgba(245,245,240,0.28);
-      box-shadow: 0 6px 0 rgba(0,0,0,0.25);
+
+    .ruta-nodo.dominado .ruta-disco {
+      background: linear-gradient(160deg, var(--acid), var(--acid-dark));
+      color: var(--ink);
+      box-shadow: 0 4px 0 rgba(90,125,0,0.9), 0 0 22px rgba(191,255,0,0.35);
     }
+    .ruta-nodo.progreso .ruta-disco {
+      background: var(--ink-muted);
+      box-shadow: 0 4px 0 rgba(0,0,0,0.5), 0 0 18px rgba(255,217,61,0.18);
+    }
+    .ruta-nodo.vacio { opacity: 0.42; }
+    .ruta-nodo.vacio .ruta-disco { background: rgba(245,245,240,0.06); color: rgba(245,245,240,0.35); }
 
     .ruta-nodo.siguiente {
-      background: var(--acid); color: var(--ink);
-      box-shadow: 0 6px 0 var(--acid-dark), 0 0 0 6px var(--acid-glow);
-      animation: ruta-latido 2.2s ease-in-out infinite;
+      border-color: rgba(191,255,0,0.55);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.2), 0 0 0 4px var(--acid-glow), 0 14px 34px -14px rgba(191,255,0,0.5);
+    }
+    .ruta-nodo.siguiente .ruta-disco {
+      background: linear-gradient(160deg, var(--acid), var(--acid-dark));
+      color: var(--ink);
+      box-shadow: 0 4px 0 rgba(90,125,0,0.9), 0 0 26px rgba(191,255,0,0.5);
+      animation: ruta-latido 2.4s ease-in-out infinite;
     }
     @keyframes ruta-latido {
-      0%, 100% { box-shadow: 0 6px 0 var(--acid-dark), 0 0 0 6px var(--acid-glow); }
-      50%      { box-shadow: 0 6px 0 var(--acid-dark), 0 0 0 16px rgba(191,255,0,0.05); }
+      0%, 100% { box-shadow: 0 4px 0 rgba(90,125,0,0.9), 0 0 26px rgba(191,255,0,0.5); }
+      50%      { box-shadow: 0 4px 0 rgba(90,125,0,0.9), 0 0 40px rgba(191,255,0,0.75); }
+    }
+
+    .ruta-corona {
+      position: absolute; top: -17px; left: 50%;
+      transform: translateX(-50%) rotate(-8deg);
+      font-size: 1.5rem;
+      filter: drop-shadow(0 3px 5px rgba(0,0,0,0.6));
+      pointer-events: none;
     }
 
     .ruta-anillo {
-      position: absolute; inset: -6px;
-      width: calc(100% + 12px); height: calc(100% + 12px);
+      position: absolute; inset: -5px;
+      width: calc(100% + 10px); height: calc(100% + 10px);
       transform: rotate(-90deg); pointer-events: none;
     }
-    .ruta-anillo-fondo  { fill: none; stroke: rgba(245,245,240,0.10); stroke-width: 6; }
-    .ruta-anillo-avance { fill: none; stroke: var(--acid); stroke-width: 6; stroke-linecap: round; }
-
-    /* Aire extra para que la etiqueta no toque el texto del tema anterior */
-    .ruta-paso:has(.siguiente) { margin-top: 14px; }
+    .ruta-anillo-fondo  { fill: none; stroke: rgba(245,245,240,0.10); stroke-width: 5; }
+    .ruta-anillo-avance { fill: none; stroke: var(--amber); stroke-width: 5; stroke-linecap: round; }
 
     .ruta-aqui {
-      position: absolute; top: -34px;
+      position: absolute; top: -36px; z-index: 2;
       background: var(--white); color: var(--ink);
       font-size: 0.875rem; font-weight: 800;
-      padding: 5px 13px; border-radius: 100px;
+      padding: 5px 14px; border-radius: 100px;
       white-space: nowrap;
+      box-shadow: 0 6px 16px -6px rgba(0,0,0,0.8);
     }
     .ruta-aqui::after {
       content: ""; position: absolute; bottom: -5px; left: 50%;
@@ -313,14 +350,31 @@
       border-top: 6px solid var(--white);
     }
 
-    .ruta-nombre {
-      font-size: 0.95rem; font-weight: 700; line-height: 1.25;
-      color: var(--white);
+    /* Fondo propio: el trazo pasa cerca y el texto tiene que ganar siempre */
+    .ruta-etiqueta {
+      position: relative; z-index: 2;
+      display: flex; flex-direction: column; gap: 3px;
+      padding: 7px 12px; border-radius: 14px;
+      background: rgba(10,10,26,0.82);
+      -webkit-backdrop-filter: blur(6px);
+      backdrop-filter: blur(6px);
     }
-    .ruta-detalle {
-      font-size: 0.875rem; line-height: 1.3;
-      color: rgba(245,245,240,0.45);
+    .ruta-practicar {
+      margin-top: 5px; align-self: center;
+      border: 1px solid rgba(191,255,0,0.45);
+      background: rgba(191,255,0,0.10);
+      color: var(--acid);
+      font-family: var(--font); font-weight: 700; font-size: 0.875rem;
+      padding: 5px 14px; border-radius: 100px; cursor: pointer;
+      transition: all var(--transition);
     }
+    .ruta-practicar:hover:not(:disabled) { background: var(--acid); color: var(--ink); }
+    .ruta-practicar:disabled { opacity: 0.55; cursor: progress; }
+    .ruta-practicar:focus-visible { outline: 2px solid var(--white); outline-offset: 3px; }
+
+    .ruta-nombre { font-size: 0.95rem; font-weight: 700; line-height: 1.25; color: var(--white); }
+    .ruta-detalle { font-size: 0.875rem; line-height: 1.3; color: rgba(245,245,240,0.45); }
+
     .ruta-vacia, .ruta-mensaje {
       text-align: center; padding: 48px 20px;
       color: rgba(245,245,240,0.4); font-size: 0.95rem;
@@ -329,7 +383,7 @@
 
     .ruta-leyenda {
       display: flex; flex-wrap: wrap; gap: 10px 22px;
-      justify-content: center; margin-bottom: 28px;
+      justify-content: center; margin-bottom: 26px;
       font-size: 0.875rem; color: rgba(245,245,240,0.6); font-weight: 600;
     }
     .ruta-leyenda i {
@@ -338,14 +392,15 @@
     }
 
     @media (max-width: 768px) {
-      .ruta-paso { transform: translateX(calc(var(--x, 0) * 0.55)); max-width: 170px; }
-      .ruta-nodo { width: 68px; height: 68px; font-size: 1.6rem; }
-      .ruta-banner h3 { font-size: 1.15rem; }
+      .ruta-paso { transform: translateX(calc(var(--x, 0) * 0.6)); max-width: 165px; }
+      .ruta-nodo { width: 80px; height: 80px; border-radius: 23px; }
+      .ruta-disco { width: 54px; height: 54px; font-size: 1.4rem; }
+      .ruta-banner h3 { font-size: 1.1rem; }
       .ruta-nombre, .ruta-detalle, .ruta-leyenda, .vista-toggle button { font-size: 1rem; }
     }
 
     @media (prefers-reduced-motion: reduce) {
-      .ruta-nodo, .ruta-nodo.siguiente { animation: none; transition: none; }
+      .ruta-nodo, .ruta-nodo.siguiente .ruta-disco { animation: none; transition: none; }
     }
   </style>
 </head>
@@ -421,7 +476,7 @@
       <div id="vista-ruta">
         <div class="ruta-leyenda">
           <span><i style="background:var(--acid)"></i>Dominado (80% o más)</span>
-          <span><i style="background:var(--ink-muted);border:2px solid rgba(191,255,0,0.5)"></i>En progreso</span>
+          <span><i style="background:var(--amber)"></i>En progreso</span>
           <span><i style="background:var(--ink-muted)"></i>Sin practicar</span>
           <span><i style="background:rgba(245,245,240,0.08)"></i>Sin contenido aún</span>
         </div>

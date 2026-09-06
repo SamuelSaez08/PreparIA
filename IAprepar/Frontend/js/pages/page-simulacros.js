@@ -31,6 +31,15 @@ const PageSimulacros = {
     }
 
     await this.loadData();
+
+    // Si venimos de "Practicar" en la ruta de aprendizaje, el simulacro ya
+    // está generado y llega por el hash: se arranca directo.
+    const enlace = /simulacro=(\d+)/.exec(window.location.hash || '');
+    if (enlace) {
+      history.replaceState(null, '', window.location.pathname);
+      this.state.simulacroId = parseInt(enlace[1], 10);
+      await this.startSimulacro();
+    }
   },
 
   async generateIAFast() {
