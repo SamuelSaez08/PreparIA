@@ -16,6 +16,14 @@ const { notFoundHandler, errorHandler } = require('./middlewares/error.middlewar
 
 const app = express();
 
+// Render, Cloud Run y Vercel ponen exactamente un proxy delante. Sin esto,
+// req.ip devuelve la IP del proxy y no la del usuario: el limitador metería a
+// todo el mundo en el mismo cubo y las sesiones se registrarían con una IP
+// falsa. 0 en local, donde no hay proxy.
+app.set('trust proxy', parseInt(
+  process.env.TRUST_PROXY ?? (process.env.NODE_ENV === 'production' ? '1' : '0'), 10
+));
+
 // ── Seguridad
 app.use(helmet({
   contentSecurityPolicy: false,
@@ -58,8 +66,6 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 
-// ── Rate limiter
-app.use(rateLimiter);
 
 // ── Parsers
 app.use(express.json({ limit: '2mb' }));
@@ -88,7 +94,10 @@ app.get('/', (_req, res) => {
 });
 
 // ── API v1
-app.use('/api/v1', routes);
+// El limitador va aquí y no de forma global: si se aplicara a todo, cada
+// carga de página (HTML + CSS + varios JS) gastaría media docena de peticiones
+// del cupo, y el estudiante quedaría bloqueado sin haber tocado la API.
+app.use('/api/v1', rateLimiter, routes);
 
 // ── Frontend estático
 // En desarrollo local el mismo servidor sirve la interfaz, de modo que
