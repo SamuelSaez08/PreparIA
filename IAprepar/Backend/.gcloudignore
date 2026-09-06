@@ -1,0 +1,21 @@
+# Lo que NO se sube a Cloud Build al desplegar con --source
+
+.gcloudignore
+.git/
+.gitignore
+
+# Dependencias: Cloud Run las instala desde package-lock.json
+node_modules/
+
+# Secretos — nunca deben viajar en el paquete de origen
+.env
+.env.*
+env.cloudrun.yaml
+
+# Basura local
+logs/
+*.log
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

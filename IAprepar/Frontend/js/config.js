@@ -14,6 +14,6 @@ const PREPARIA_CONFIG = (() => {
   return {
     API_BASE_URL: isDev
       ? 'http://localhost:3000/api/v1'
-      : 'https://preparia.onrender.com/api/v1',
+      : 'https://preparia-api-232155951510.us-east1.run.app/api/v1',
   };
 })();

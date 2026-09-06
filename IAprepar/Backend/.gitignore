@@ -3,6 +3,7 @@ node_modules/
 
 # Variables de entorno — NUNCA subir al repositorio
 .env
+env.cloudrun.yaml
 
 # Scripts sensibles
 inject_log.js
