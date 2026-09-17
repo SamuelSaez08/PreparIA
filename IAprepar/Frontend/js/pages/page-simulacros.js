@@ -54,6 +54,7 @@ const PageSimulacros = {
         dificultad: 'mixta',
         mezclar_dificultad: true,
         cantidad: 10,
+        duracion_minutos: 20,
         titulo: `Simulacro con IA - ${new Date().toLocaleDateString()}`
       });
 

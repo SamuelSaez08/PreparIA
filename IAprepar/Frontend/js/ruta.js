@@ -244,7 +244,8 @@ const RutaAprendizaje = (() => {
         id_materia: 1,
         id_nivel: 3,
         id_nodo: Number(id),
-        cantidad: 5,
+        cantidad: 10,
+        duracion_minutos: 20,
         mezclar_dificultad: true,
         titulo: `Práctica: ${nombre}`,
       });

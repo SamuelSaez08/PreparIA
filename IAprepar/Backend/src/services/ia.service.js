@@ -3,6 +3,7 @@
 const db = require('../config/db');
 const { getModel, getModelConFallback } = require('../config/gemini');
 const logger = require('../utils/logger');
+const bancoRepo = require('../repositories/banco.repo');
 
 /* ─────────────────────────────────────────────────────────────────────────────
    UTILIDADES INTERNAS
@@ -449,8 +450,18 @@ Responde ÚNICAMENTE con este JSON exacto, sin texto adicional, sin markdown:
       _validarRespuestaJSON(parsed, cantidad);
 
       const exitosas = parsed.preguntas.filter(p => _validarPregunta(p));
-      if (exitosas.length < Math.ceil(cantidad * 0.5))
-        throw new Error(`Demasiadas preguntas fallaron la validación (${exitosas.length}/${cantidad})`);
+
+      // Antes se exigía que sobreviviera la mitad del lote y, si no, se
+      // descartaba todo y se reintentaba. Con lotes pequeños eso tiraba
+      // preguntas perfectamente válidas y gastaba cuota de Gemini en
+      // reintentos. Ahora solo es un fallo real cuando no sobrevive ninguna;
+      // el hueco que quede lo rellena el banco de preguntas.
+      if (!exitosas.length)
+        throw new Error(`Ninguna de las ${cantidad} preguntas pasó la validación`);
+
+      if (exitosas.length < cantidad) {
+        logger.warn(`[ia.service] Lote incompleto: ${exitosas.length}/${cantidad} preguntas válidas.`);
+      }
 
       await _logIA({
         id_usuario, accion: 'generar_preguntas', id_materia, id_nodo, dificultad,
@@ -784,14 +795,55 @@ const generarSimulacroCompleto = async (opciones) => {
   const contextData = { id_usuario: id_usuario_admin, id_materia, id_nodo };
   let todasPreguntas = [];
 
-  if (id_nodo) {
+  /* ── Primero el banco, después la IA ──────────────────────────────────────
+     Antes se pedían siempre preguntas nuevas, aunque la base tuviera cientos
+     válidas de esos mismos temas. Ahora se reutiliza lo que ya existe y solo
+     se genera lo que falte.
+
+     Cuánto se toma del banco depende del tipo de simulacro:
+     · Práctica de un tema  → todo lo que haya de ese tema. Es un ejercicio de
+       repaso, así que reutilizar es lo correcto y puede costar cero llamadas
+       a Gemini.
+     · Simulacro general    → nada. El simulacro es la prueba seria y debe ser
+       íntegramente nuevo, así que se genera 100% con IA. El banco solo entra
+       como último recurso si la IA no logra completar las preguntas.        */
+  const nodosBanco  = id_nodo ? [id_nodo] : null;
+  const limiteBanco = id_nodo ? cantidad : 0;
+
+  let idsDelBanco = [];
+  try {
+    idsDelBanco = await bancoRepo.tomar({
+      idMateria: id_materia,
+      idNodos:   nodosBanco,
+      idUsuario: id_usuario_admin,
+      limite:    limiteBanco,
+    });
+  } catch (err) {
+    // Si la consulta al banco falla, se sigue generando todo con IA.
+    logger.error(`[ia.service] No se pudo consultar el banco: ${err.message}`);
+  }
+
+  const faltan = Math.max(0, cantidad - idsDelBanco.length);
+
+  if (idsDelBanco.length) {
+    logger.info(`[ia.service] Banco: ${idsDelBanco.length} preguntas reutilizadas, faltan ${faltan} por generar.`);
+  }
+
+  // Tema al que se le pedirá el relleno si al final falta algo. Se guarda
+  // durante la generación porque cada rama conoce un tema distinto.
+  let nodoRelleno = { id: null, nombre: 'Temas Generales' };
+
+  if (faltan === 0) {
+    // Nada que pedirle a la IA.
+  } else if (id_nodo) {
     // ── Simulacro de un tema concreto ────────────────────────────────────
     // Viene de "Practicar este tema" en la ruta de aprendizaje.
     const { rows: nRows } = await db.query(
       'SELECT nombre FROM nodo_aprendizaje WHERE id = $1', [id_nodo]
     );
     const nodo = nRows.length ? nRows[0].nombre : 'Temas Generales';
-    const distr = _getDificultadStats(cantidad, mezclar_dificultad);
+    nodoRelleno = { id: id_nodo, nombre: nodo };
+    const distr = _getDificultadStats(faltan, mezclar_dificultad);
 
     const lotes = await Promise.all(
       ['facil', 'media', 'dificil']
@@ -801,7 +853,7 @@ const generarSimulacroCompleto = async (opciones) => {
             dificultad: d, cantidad: distr[d], tipo: 'seleccion_multiple' }, contextData)
           .then(ps => ps.map(q => ({ ...q, _dificultadDB: d, _idNodo: id_nodo }))))
     );
-    todasPreguntas = _shuffle(lotes.flat()).slice(0, cantidad);
+    todasPreguntas = _shuffle(lotes.flat()).slice(0, faltan);
 
   } else {
     // ── Simulacro general repartido entre los temas de la materia ────────
@@ -809,13 +861,13 @@ const generarSimulacroCompleto = async (opciones) => {
     // preguntas quedaban sin nodo, así que ningún simulacro alimentaba el
     // progreso por tema. Ahora se eligen temas reales del árbol y cada
     // pregunta nace sabiendo a cuál pertenece.
-    const nodos = await _elegirNodosParaSimulacro(id_materia, cantidad);
+    const nodos = await _elegirNodosParaSimulacro(id_materia, faltan);
 
     if (!nodos.length) {
       // Materia sin árbol cargado: se conserva el comportamiento anterior
       // en vez de fallar, aunque el progreso por tema no pueda calcularse.
       logger.warn(`[ia.service] La materia ${id_materia} no tiene nodos; el simulacro no podrá atribuirse por tema.`);
-      const distr = _getDificultadStats(cantidad, mezclar_dificultad);
+      const distr = _getDificultadStats(faltan, mezclar_dificultad);
       const lotes = await Promise.all(
         ['facil', 'media', 'dificil']
           .filter(d => distr[d] > 0)
@@ -824,13 +876,14 @@ const generarSimulacroCompleto = async (opciones) => {
               descripcion_nivel: null, dificultad: d, cantidad: distr[d], tipo: 'seleccion_multiple' }, contextData)
             .then(ps => ps.map(q => ({ ...q, _dificultadDB: d, _idNodo: null }))))
       );
-      todasPreguntas = _shuffle(lotes.flat()).slice(0, cantidad);
+      todasPreguntas = _shuffle(lotes.flat()).slice(0, faltan);
 
     } else {
       // Una llamada por tema. La dificultad rota entre temas para que la
       // mezcla global se acerque a la distribución del ICFES sin disparar
       // el número de peticiones a la IA.
       const ROTACION = ['media', 'facil', 'media', 'dificil'];
+      nodoRelleno = { id: nodos[0].id, nombre: nodos[0].nombre };
 
       const lotes = await Promise.all(
         nodos.map((n, i) => {
@@ -850,15 +903,90 @@ const generarSimulacroCompleto = async (opciones) => {
             });
         })
       );
-      todasPreguntas = _shuffle(lotes.flat()).slice(0, cantidad);
+      todasPreguntas = _shuffle(lotes.flat()).slice(0, faltan);
     }
   }
 
-  if (!todasPreguntas.length) {
-    throw new Error('La IA no devolvió ninguna pregunta válida. Intenta de nuevo en un momento.');
+  /* ── Relleno final ────────────────────────────────────────────────────────
+     La IA casi nunca devuelve exactamente lo pedido: cada lote descarta las
+     preguntas que no pasan la validación, y al repartir 10 preguntas entre
+     varios temas esas pérdidas se acumulan. Así llegaban simulacros de 7.
+
+     El orden del relleno respeta la naturaleza de cada simulacro:
+     · General  → una segunda llamada a la IA, para que siga siendo 100% nuevo.
+     · Práctica → el banco, que es justo de donde debe salir.
+     En ambos casos, si eso no basta, se recurre a la otra fuente antes que
+     entregar un simulacro incompleto.                                       */
+  const _faltante = () => cantidad - (idsDelBanco.length + todasPreguntas.length);
+
+  /** Una llamada extra a la IA por las preguntas que falten. */
+  const _completarConIA = async () => {
+    const deficit = _faltante();
+    if (deficit <= 0) return;
+
+    try {
+      logger.warn(`[ia.service] Faltan ${deficit} preguntas; segunda llamada a la IA.`);
+      // Se piden dos de más: parte se perderá en la validación y la idea es
+      // llegar al número exacto sin una tercera llamada.
+      const extra = await generarPreguntas(
+        { materia, nodo: nodoRelleno.nombre, subtema: '', nivel: nivelSimulacro,
+          descripcion_nivel: null, dificultad: 'media', cantidad: Math.min(deficit + 2, 10),
+          tipo: 'seleccion_multiple' },
+        { ...contextData, id_nodo: nodoRelleno.id }
+      );
+
+      todasPreguntas = [
+        ...todasPreguntas,
+        ...extra.slice(0, deficit).map(q => ({ ...q, _dificultadDB: 'media', _idNodo: nodoRelleno.id })),
+      ];
+    } catch (err) {
+      logger.error(`[ia.service] La segunda llamada a la IA también falló: ${err.message}`);
+    }
+  };
+
+  /** Completa desde el banco de preguntas ya existentes. */
+  const _completarConBanco = async () => {
+    const deficit = _faltante();
+    if (deficit <= 0) return;
+
+    try {
+      const relleno = await bancoRepo.tomar({
+        idMateria: id_materia,
+        idNodos:   nodosBanco,
+        idUsuario: id_usuario_admin,
+        limite:    deficit,
+        excluir:   idsDelBanco,
+      });
+      if (relleno.length) {
+        logger.info(`[ia.service] Se completaron ${relleno.length} preguntas desde el banco.`);
+        idsDelBanco = [...idsDelBanco, ...relleno];
+      }
+    } catch (err) {
+      logger.error(`[ia.service] No se pudo completar desde el banco: ${err.message}`);
+    }
+  };
+
+  if (id_nodo) {
+    await _completarConBanco();
+    await _completarConIA();
+  } else {
+    await _completarConIA();
+    await _completarConBanco();
   }
 
-  _validarDistribucionCompetencias(todasPreguntas, todasPreguntas.length);
+  if (_faltante() > 0) {
+    logger.warn(`[ia.service] El simulacro queda con ${cantidad - _faltante()}/${cantidad} preguntas: no hubo forma de completarlo.`);
+  }
+
+  if (!todasPreguntas.length && !idsDelBanco.length) {
+    throw new Error('No hay preguntas disponibles para estos temas y la IA no devolvió ninguna. Intenta de nuevo en un momento.');
+  }
+
+  // La distribución solo se valida sobre lo recién generado: las del banco ya
+  // pasaron por esta comprobación cuando fueron creadas.
+  if (todasPreguntas.length) {
+    _validarDistribucionCompetencias(todasPreguntas, todasPreguntas.length);
+  }
 
   return await db.transaction(async (client) => {
     const { rows: sRows } = await client.query(
@@ -869,56 +997,82 @@ const generarSimulacroCompleto = async (opciones) => {
     const idSimulacro = sRows[0].id;
 
     console.time('batch-insert-simulacro');
-    // El nodo ya no es global: cada pregunta trae el suyo desde su generación.
-    const idNodos = todasPreguntas.map(q => q._idNodo || id_nodo || null);
-    const idNiveles = todasPreguntas.map(p =>
-      (p.competencia && nivelIdPorCompetencia[p.competencia]) ? nivelIdPorCompetencia[p.competencia] : id_nivel
-    );
-    const enunciados = todasPreguntas.map(p => p.enunciado);
-    const textoBases = todasPreguntas.map(p => p.texto_base || null);
-    const dificultades = todasPreguntas.map(p => p.dificultad || p._dificultadDB || 'media');
-    const tipos = todasPreguntas.map(p => p.tipo || 'seleccion_multiple');
-    const explicaciones = todasPreguntas.map(p => p.explicacion);
-    const temas = todasPreguntas.map(p => p.tema || null);
 
-    const { rows: preguntasInsertadas } = await client.query(
-      `INSERT INTO pregunta (id_nodo, id_nivel, enunciado, texto_base, dificultad, tipo, explicacion, tema, activa, creado_por, creado_en)
-       SELECT unnest($1::int[]), unnest($2::int[]), unnest($3::text[]), unnest($4::text[]),
-              unnest($5::text[])::dificultad_enum, unnest($6::text[])::tipo_pregunta_enum, unnest($7::text[]), unnest($9::text[]), true, $8, NOW()
-       RETURNING id`,
-      [idNodos, idNiveles, enunciados, textoBases, dificultades, tipos, explicaciones, id_usuario_admin, temas]
-    );
+    // Solo hay que insertar preguntas si la IA generó algo. Si el simulacro se
+    // armó entero con el banco, este bloque se salta por completo.
+    let preguntasInsertadas = [];
 
-    const opIdPreguntas = [], opTextos = [], opLetras = [], opEsCorrectas = [];
-    preguntasInsertadas.forEach((row, i) => {
-      for (const op of todasPreguntas[i].opciones) {
-        opIdPreguntas.push(row.id);
-        opTextos.push(op.texto);
-        opLetras.push(op.letra);
-        opEsCorrectas.push(op.es_correcta);
-      }
-    });
-    await client.query(
-      `INSERT INTO opcion_respuesta (id_pregunta, texto, letra, es_correcta)
-       SELECT unnest($1::int[]), unnest($2::text[]), unnest($3::text[]), unnest($4::bool[])`,
-      [opIdPreguntas, opTextos, opLetras, opEsCorrectas]
-    );
+    if (todasPreguntas.length) {
+      // El nodo ya no es global: cada pregunta trae el suyo desde su generación.
+      const idNodos = todasPreguntas.map(q => q._idNodo || id_nodo || null);
+      const idNiveles = todasPreguntas.map(p =>
+        (p.competencia && nivelIdPorCompetencia[p.competencia]) ? nivelIdPorCompetencia[p.competencia] : id_nivel
+      );
+      const enunciados = todasPreguntas.map(p => p.enunciado);
+      const textoBases = todasPreguntas.map(p => p.texto_base || null);
+      const dificultades = todasPreguntas.map(p => p.dificultad || p._dificultadDB || 'media');
+      const tipos = todasPreguntas.map(p => p.tipo || 'seleccion_multiple');
+      const explicaciones = todasPreguntas.map(p => p.explicacion);
+      const temas = todasPreguntas.map(p => p.tema || null);
 
-    const spIdPreguntas = preguntasInsertadas.map(r => r.id);
-    const spOrdenes = preguntasInsertadas.map((_, i) => i + 1);
+      const { rows: filasNuevas } = await client.query(
+        `INSERT INTO pregunta (id_nodo, id_nivel, enunciado, texto_base, dificultad, tipo, explicacion, tema, activa, creado_por, creado_en)
+         SELECT unnest($1::int[]), unnest($2::int[]), unnest($3::text[]), unnest($4::text[]),
+                unnest($5::text[])::dificultad_enum, unnest($6::text[])::tipo_pregunta_enum, unnest($7::text[]), unnest($9::text[]), true, $8, NOW()
+         RETURNING id`,
+        [idNodos, idNiveles, enunciados, textoBases, dificultades, tipos, explicaciones, id_usuario_admin, temas]
+      );
+
+      preguntasInsertadas = filasNuevas;
+
+      // Las opciones se enlazan por posición: la fila i corresponde a la
+      // pregunta i del lote generado.
+      const opIdPreguntas = [], opTextos = [], opLetras = [], opEsCorrectas = [];
+      preguntasInsertadas.forEach((row, i) => {
+        for (const op of todasPreguntas[i].opciones) {
+          opIdPreguntas.push(row.id);
+          opTextos.push(op.texto);
+          opLetras.push(op.letra);
+          opEsCorrectas.push(op.es_correcta);
+        }
+      });
+
+      await client.query(
+        `INSERT INTO opcion_respuesta (id_pregunta, texto, letra, es_correcta)
+         SELECT unnest($1::int[]), unnest($2::text[]), unnest($3::text[]), unnest($4::bool[])`,
+        [opIdPreguntas, opTextos, opLetras, opEsCorrectas]
+      );
+    }
+
+    // El simulacro mezcla las reutilizadas del banco con las recién generadas.
+    const idsFinales = _shuffle([
+      ...idsDelBanco,
+      ...preguntasInsertadas.map(r => r.id),
+    ]);
+
+    if (!idsFinales.length) {
+      throw new Error('No se pudo armar el simulacro: quedó sin preguntas.');
+    }
+
     await client.query(
       `INSERT INTO simulacro_pregunta (id_simulacro, id_pregunta, orden)
        SELECT $1, unnest($2::int[]), unnest($3::int[])`,
-      [idSimulacro, spIdPreguntas, spOrdenes]
+      [idSimulacro, idsFinales, idsFinales.map((_, i) => i + 1)]
     );
+
     console.timeEnd('batch-insert-simulacro');
-    logger.info(`[ia.service] Simulacro ${idSimulacro}: ${todasPreguntas.length} preguntas en batch`);
+    logger.info(
+      `[ia.service] Simulacro ${idSimulacro}: ${idsFinales.length} preguntas ` +
+      `(${idsDelBanco.length} del banco, ${preguntasInsertadas.length} generadas)`
+    );
 
     return {
-      id_simulacro: idSimulacro,
+      id_simulacro:    idSimulacro,
       titulo,
-      total_preguntas: todasPreguntas.length,
-      preguntas: todasPreguntas
+      total_preguntas: idsFinales.length,
+      del_banco:       idsDelBanco.length,
+      generadas:       preguntasInsertadas.length,
+      preguntas:       todasPreguntas
     };
   });
 };
