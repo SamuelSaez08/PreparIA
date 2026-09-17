@@ -58,7 +58,10 @@ const PageSimulacros = {
         titulo: `Simulacro con IA - ${new Date().toLocaleDateString()}`
       });
 
-      UI.showToast(`✅ Simulacro generado con ${res.datos.total_preguntas} preguntas! Arrancando...`);
+      // Se muestra cuántas generó la IA para poder verificar de un vistazo que
+      // el simulacro no está saliendo del banco de preguntas.
+      const d = res.datos;
+      UI.showToast(`✅ Simulacro con ${d.total_preguntas} preguntas (${d.generadas ?? d.total_preguntas} generadas por IA). Arrancando...`);
       UI.closeModal('ia-modal');
       this.state.simulacroId = res.datos.id_simulacro;
       await this.startSimulacro();

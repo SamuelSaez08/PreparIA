@@ -236,8 +236,10 @@ const RutaAprendizaje = (() => {
     const texto  = boton.textContent;
 
     boton.disabled = true;
-    boton.textContent = 'Generando…';
-    UI.showToast(`Preparando preguntas de "${nombre}"… puede tardar unos segundos.`);
+    boton.textContent = 'Preparando…';
+    // Las preguntas salen del banco de la base de datos, no de la IA: esto es
+    // cuestión de milisegundos, no de esperar a que Gemini escriba nada.
+    UI.showToast(`Buscando preguntas de "${nombre}" en el banco…`);
 
     try {
       const res = await IAAPI.generarSimulacro({
@@ -252,6 +254,9 @@ const RutaAprendizaje = (() => {
 
       const idSimulacro = res.datos && res.datos.id_simulacro;
       if (!idSimulacro) throw new Error('El servidor no devolvió el simulacro.');
+
+      const total = res.datos.total_preguntas || 0;
+      UI.showToast(`${total} preguntas del banco listas. Arrancando…`);
 
       window.location.href = `simulacros.html#simulacro=${idSimulacro}`;
     } catch (err) {

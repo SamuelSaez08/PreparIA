@@ -795,65 +795,50 @@ const generarSimulacroCompleto = async (opciones) => {
   const contextData = { id_usuario: id_usuario_admin, id_materia, id_nodo };
   let todasPreguntas = [];
 
-  /* ── Primero el banco, después la IA ──────────────────────────────────────
-     Antes se pedían siempre preguntas nuevas, aunque la base tuviera cientos
-     válidas de esos mismos temas. Ahora se reutiliza lo que ya existe y solo
-     se genera lo que falte.
+  /* ── Dos caminos completamente separados ──────────────────────────────────
 
-     Cuánto se toma del banco depende del tipo de simulacro:
-     · Práctica de un tema  → todo lo que haya de ese tema. Es un ejercicio de
-       repaso, así que reutilizar es lo correcto y puede costar cero llamadas
-       a Gemini.
-     · Simulacro general    → nada. El simulacro es la prueba seria y debe ser
-       íntegramente nuevo, así que se genera 100% con IA. El banco solo entra
-       como último recurso si la IA no logra completar las preguntas.        */
-  const nodosBanco  = id_nodo ? [id_nodo] : null;
-  const limiteBanco = id_nodo ? cantidad : 0;
+     · PRÁCTICA (llega con id_nodo, desde "Practicar este tema" en Ciencias
+       Sociales) → se arma SOLO con el banco de preguntas de la base de datos.
+       Cero llamadas a la IA. Es repaso de un tema que ya tiene preguntas
+       escritas; no hay razón para gastar cuota ni para hacer esperar al
+       estudiante.
+
+     · SIMULACRO (sin id_nodo) → se genera SOLO con la IA. Ninguna pregunta
+       sale del banco: la prueba tiene que ser nueva cada vez.
+
+     No se mezclan. Si a alguno le faltan preguntas, se resuelve dentro de su
+     propia fuente o se falla con un mensaje claro.                          */
 
   let idsDelBanco = [];
-  try {
-    idsDelBanco = await bancoRepo.tomar({
-      idMateria: id_materia,
-      idNodos:   nodosBanco,
-      idUsuario: id_usuario_admin,
-      limite:    limiteBanco,
-    });
-  } catch (err) {
-    // Si la consulta al banco falla, se sigue generando todo con IA.
-    logger.error(`[ia.service] No se pudo consultar el banco: ${err.message}`);
-  }
 
-  const faltan = Math.max(0, cantidad - idsDelBanco.length);
-
-  if (idsDelBanco.length) {
-    logger.info(`[ia.service] Banco: ${idsDelBanco.length} preguntas reutilizadas, faltan ${faltan} por generar.`);
-  }
-
-  // Tema al que se le pedirá el relleno si al final falta algo. Se guarda
-  // durante la generación porque cada rama conoce un tema distinto.
+  // Tema al que se le pedirá el relleno si el simulacro queda corto.
   let nodoRelleno = { id: null, nombre: 'Temas Generales' };
 
-  if (faltan === 0) {
-    // Nada que pedirle a la IA.
-  } else if (id_nodo) {
-    // ── Simulacro de un tema concreto ────────────────────────────────────
-    // Viene de "Practicar este tema" en la ruta de aprendizaje.
-    const { rows: nRows } = await db.query(
-      'SELECT nombre FROM nodo_aprendizaje WHERE id = $1', [id_nodo]
-    );
-    const nodo = nRows.length ? nRows[0].nombre : 'Temas Generales';
-    nodoRelleno = { id: id_nodo, nombre: nodo };
-    const distr = _getDificultadStats(faltan, mezclar_dificultad);
+  if (id_nodo) {
+    // ── PRÁCTICA: solo banco ─────────────────────────────────────────────
+    try {
+      idsDelBanco = await bancoRepo.tomar({
+        idMateria: id_materia,
+        idNodos:   [id_nodo],
+        idUsuario: id_usuario_admin,
+        limite:    cantidad,
+      });
+    } catch (err) {
+      logger.error(`[ia.service] No se pudo consultar el banco: ${err.message}`);
+      throw new Error('No se pudo leer el banco de preguntas. Intenta de nuevo.');
+    }
 
-    const lotes = await Promise.all(
-      ['facil', 'media', 'dificil']
-        .filter(d => distr[d] > 0)
-        .map(d => generarPreguntas(
-          { materia, nodo, subtema: '', nivel: nivelSimulacro, descripcion_nivel: null,
-            dificultad: d, cantidad: distr[d], tipo: 'seleccion_multiple' }, contextData)
-          .then(ps => ps.map(q => ({ ...q, _dificultadDB: d, _idNodo: id_nodo }))))
-    );
-    todasPreguntas = _shuffle(lotes.flat()).slice(0, faltan);
+    const disponibles = await bancoRepo.contar({ idMateria: id_materia, idNodos: [id_nodo] })
+      .then(r => (r.rows[0] ? r.rows[0].total : 0))
+      .catch(() => idsDelBanco.length);
+
+    logger.info(`[ia.service] Práctica del tema ${id_nodo}: ${idsDelBanco.length} preguntas del banco (hay ${disponibles} en total, 0 llamadas a la IA).`);
+
+    if (!idsDelBanco.length) {
+      const err = new Error('Este tema todavía no tiene preguntas en el banco. Genera algunas desde el panel de administración o haz un simulacro general para alimentarlo.');
+      err.statusCode = 409;
+      throw err;
+    }
 
   } else {
     // ── Simulacro general repartido entre los temas de la materia ────────
@@ -861,13 +846,13 @@ const generarSimulacroCompleto = async (opciones) => {
     // preguntas quedaban sin nodo, así que ningún simulacro alimentaba el
     // progreso por tema. Ahora se eligen temas reales del árbol y cada
     // pregunta nace sabiendo a cuál pertenece.
-    const nodos = await _elegirNodosParaSimulacro(id_materia, faltan);
+    const nodos = await _elegirNodosParaSimulacro(id_materia, cantidad);
 
     if (!nodos.length) {
       // Materia sin árbol cargado: se conserva el comportamiento anterior
       // en vez de fallar, aunque el progreso por tema no pueda calcularse.
       logger.warn(`[ia.service] La materia ${id_materia} no tiene nodos; el simulacro no podrá atribuirse por tema.`);
-      const distr = _getDificultadStats(faltan, mezclar_dificultad);
+      const distr = _getDificultadStats(cantidad, mezclar_dificultad);
       const lotes = await Promise.all(
         ['facil', 'media', 'dificil']
           .filter(d => distr[d] > 0)
@@ -876,7 +861,7 @@ const generarSimulacroCompleto = async (opciones) => {
               descripcion_nivel: null, dificultad: d, cantidad: distr[d], tipo: 'seleccion_multiple' }, contextData)
             .then(ps => ps.map(q => ({ ...q, _dificultadDB: d, _idNodo: null }))))
       );
-      todasPreguntas = _shuffle(lotes.flat()).slice(0, faltan);
+      todasPreguntas = _shuffle(lotes.flat()).slice(0, cantidad);
 
     } else {
       // Una llamada por tema. La dificultad rota entre temas para que la
@@ -903,79 +888,50 @@ const generarSimulacroCompleto = async (opciones) => {
             });
         })
       );
-      todasPreguntas = _shuffle(lotes.flat()).slice(0, faltan);
+      todasPreguntas = _shuffle(lotes.flat()).slice(0, cantidad);
     }
   }
 
-  /* ── Relleno final ────────────────────────────────────────────────────────
-     La IA casi nunca devuelve exactamente lo pedido: cada lote descarta las
-     preguntas que no pasan la validación, y al repartir 10 preguntas entre
-     varios temas esas pérdidas se acumulan. Así llegaban simulacros de 7.
+  /* ── Relleno del simulacro ────────────────────────────────────────────────
+     Solo aplica al simulacro general. La IA casi nunca devuelve exactamente lo
+     pedido: cada lote descarta las preguntas que no pasan la validación y, al
+     repartir 10 entre varios temas, esas pérdidas se acumulan. Por eso llegaban
+     simulacros de 5 o de 7.
 
-     El orden del relleno respeta la naturaleza de cada simulacro:
-     · General  → una segunda llamada a la IA, para que siga siendo 100% nuevo.
-     · Práctica → el banco, que es justo de donde debe salir.
-     En ambos casos, si eso no basta, se recurre a la otra fuente antes que
-     entregar un simulacro incompleto.                                       */
-  const _faltante = () => cantidad - (idsDelBanco.length + todasPreguntas.length);
+     El relleno vuelve a pedirle a la IA, nunca al banco: el simulacro tiene que
+     ser íntegramente nuevo. Se insiste hasta dos veces; si aun así falta algo,
+     se entrega lo que haya en vez de dejar al estudiante sin simulacro.
 
-  /** Una llamada extra a la IA por las preguntas que falten. */
-  const _completarConIA = async () => {
-    const deficit = _faltante();
-    if (deficit <= 0) return;
+     La práctica no pasa por aquí: ya salió completa del banco.              */
+  if (!id_nodo) {
+    for (let intento = 1; intento <= 2; intento++) {
+      const deficit = cantidad - todasPreguntas.length;
+      if (deficit <= 0) break;
 
-    try {
-      logger.warn(`[ia.service] Faltan ${deficit} preguntas; segunda llamada a la IA.`);
-      // Se piden dos de más: parte se perderá en la validación y la idea es
-      // llegar al número exacto sin una tercera llamada.
-      const extra = await generarPreguntas(
-        { materia, nodo: nodoRelleno.nombre, subtema: '', nivel: nivelSimulacro,
-          descripcion_nivel: null, dificultad: 'media', cantidad: Math.min(deficit + 2, 10),
-          tipo: 'seleccion_multiple' },
-        { ...contextData, id_nodo: nodoRelleno.id }
-      );
+      logger.warn(`[ia.service] Al simulacro le faltan ${deficit} preguntas; llamada extra ${intento}/2 a la IA.`);
 
-      todasPreguntas = [
-        ...todasPreguntas,
-        ...extra.slice(0, deficit).map(q => ({ ...q, _dificultadDB: 'media', _idNodo: nodoRelleno.id })),
-      ];
-    } catch (err) {
-      logger.error(`[ia.service] La segunda llamada a la IA también falló: ${err.message}`);
-    }
-  };
+      try {
+        // Se piden dos de más porque parte se perderá en la validación.
+        const extra = await generarPreguntas(
+          { materia, nodo: nodoRelleno.nombre, subtema: '', nivel: nivelSimulacro,
+            descripcion_nivel: null, dificultad: 'media', cantidad: Math.min(deficit + 2, 10),
+            tipo: 'seleccion_multiple' },
+          { ...contextData, id_nodo: nodoRelleno.id }
+        );
 
-  /** Completa desde el banco de preguntas ya existentes. */
-  const _completarConBanco = async () => {
-    const deficit = _faltante();
-    if (deficit <= 0) return;
-
-    try {
-      const relleno = await bancoRepo.tomar({
-        idMateria: id_materia,
-        idNodos:   nodosBanco,
-        idUsuario: id_usuario_admin,
-        limite:    deficit,
-        excluir:   idsDelBanco,
-      });
-      if (relleno.length) {
-        logger.info(`[ia.service] Se completaron ${relleno.length} preguntas desde el banco.`);
-        idsDelBanco = [...idsDelBanco, ...relleno];
+        todasPreguntas = [
+          ...todasPreguntas,
+          ...extra.slice(0, deficit).map(q => ({ ...q, _dificultadDB: 'media', _idNodo: nodoRelleno.id })),
+        ];
+      } catch (err) {
+        logger.error(`[ia.service] Falló la llamada extra ${intento}: ${err.message}`);
+        break;
       }
-    } catch (err) {
-      logger.error(`[ia.service] No se pudo completar desde el banco: ${err.message}`);
     }
-  };
 
-  if (id_nodo) {
-    await _completarConBanco();
-    await _completarConIA();
-  } else {
-    await _completarConIA();
-    await _completarConBanco();
-  }
-
-  if (_faltante() > 0) {
-    logger.warn(`[ia.service] El simulacro queda con ${cantidad - _faltante()}/${cantidad} preguntas: no hubo forma de completarlo.`);
+    if (todasPreguntas.length < cantidad) {
+      logger.warn(`[ia.service] El simulacro queda con ${todasPreguntas.length}/${cantidad} preguntas generadas por IA.`);
+    }
   }
 
   if (!todasPreguntas.length && !idsDelBanco.length) {
