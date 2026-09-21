@@ -2,55 +2,25 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>PreparIA — Página no encontrada</title>
-  <link rel="stylesheet" href="css/styles.css">
+  <meta name="robots" content="noindex">
+  <meta name="theme-color" content="#0A0A1A">
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎓</text></svg>">
-  <style>
-    .error-wrap {
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      text-align: center;
-      padding: 40px 24px;
-      gap: 16px;
-    }
-    .error-code {
-      font-size: clamp(5rem, 20vw, 9rem);
-      font-weight: 900;
-      letter-spacing: -0.06em;
-      line-height: 1;
-      color: var(--acid);
-    }
-    .error-title {
-      font-size: clamp(1.4rem, 4vw, 2rem);
-      font-weight: 800;
-    }
-    .error-sub {
-      color: rgba(245,245,240,0.5);
-      max-width: 400px;
-      font-size: 1rem;
-    }
-    .error-actions {
-      display: flex;
-      gap: 12px;
-      flex-wrap: wrap;
-      justify-content: center;
-      margin-top: 8px;
-    }
-  </style>
+  <link rel="stylesheet" href="/css/styles.css?v=2">
+  <link rel="stylesheet" href="/css/clay.css?v=2.1.0">
 </head>
-<body>
-  <div class="error-wrap">
-    <div class="error-code">404</div>
-    <div class="error-title">Página no encontrada</div>
-    <p class="error-sub">La ruta que buscas no existe o fue movida. Vuelve al inicio y continúa tu preparación.</p>
-    <div class="error-actions">
-      <a href="index.html"    class="btn btn-primary">Ir al inicio</a>
-      <a href="dashboard.html" class="btn btn-outline">Mi dashboard</a>
+<body class="v2" data-sin-nav>
+  <main class="err-wrap">
+    <div class="clay err-card">
+      <div class="err-code" aria-hidden="true">404</div>
+      <h1>Esta página no existe</h1>
+      <p>El enlace está mal escrito o la página se movió. Tu progreso sigue intacto.</p>
+      <div class="hero2-ctas" style="justify-content:center;margin-top:14px">
+        <a href="/dashboard.html" class="btn btn-primary"><svg class="ico" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/><path d="M10 21v-6h4v6"/></svg><span>Ir a mi inicio</span></a>
+        <a href="/index.html" class="btn btn-secondary">Página principal</a>
+      </div>
     </div>
-  </div>
+  </main>
 </body>
 </html>

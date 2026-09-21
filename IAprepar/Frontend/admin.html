@@ -2,11 +2,12 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>PreparIA — Panel de administración</title>
   <meta name="robots" content="noindex, nofollow">
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛠️</text></svg>">
   <link rel="stylesheet" href="css/styles.css?v=2">
+  <link rel="stylesheet" href="css/clay.css?v=2.1.0">
   <style>
     .admin-tabs {
       display: flex; flex-wrap: wrap; gap: 8px;
@@ -128,7 +129,7 @@
     }
 
     @media print {
-      .navbar, .admin-tabs, .toolbar, .acciones, .paginacion, .no-imprimir { display: none !important; }
+      .navbar, .side, .topbar-m, .tabbar, .admin-tabs, .toolbar, .acciones, .paginacion, .no-imprimir { display: none !important; }
       body { background: #fff; color: #000; }
       .kpi, .tabla-wrap { border-color: #999; background: #fff; }
       .kpi .valor { color: #000; }
@@ -136,40 +137,27 @@
     }
   </style>
 </head>
-<body>
+<body class="v2">
 
-<!-- ── NAVBAR ── -->
-<nav class="navbar">
-  <div class="container">
-    <a href="index.html" class="nav-logo">Prepar<span>IA</span></a>
-    <div class="flex items-center gap-md">
-      <span class="pill pill-admin">Administrador</span>
-      <span style="font-size: 0.875rem;color:rgba(245,245,240,0.5)">Hola, <strong data-user-name style="color:var(--white)">Admin</strong></span>
-      <a href="dashboard.html" class="btn btn-outline btn-sm">← Volver al inicio</a>
-      <button id="logout-btn" class="btn btn-outline btn-sm">Salir</button>
-    </div>
-  </div>
-</nav>
-
-<main class="container" style="padding-top:32px;padding-bottom:64px">
+<main class="page" id="main">
 
   <!-- Si el usuario no es administrador -->
-  <div id="sin-permiso" class="aviso-rol" hidden>
-    <h2 style="margin-bottom:12px">Esta sección es solo para administradores</h2>
-    <p style="margin-bottom:20px">Tu cuenta no tiene permisos para gestionar usuarios ni contenidos.</p>
-    <a href="dashboard.html" class="btn btn-primary">Volver a mi panel</a>
+  <div id="sin-permiso" class="clay aviso-rol stack gap-12" style="padding:28px" hidden>
+    <h1 style="font-size:1.5rem">Esta sección es solo para administradores</h1>
+    <p class="t3">Tu cuenta no tiene permisos para gestionar usuarios ni contenidos.</p>
+    <a href="dashboard.html" class="btn btn-primary" style="align-self:flex-start">Volver a mi inicio</a>
   </div>
 
-  <div id="admin-contenido" hidden>
+  <div id="admin-contenido" class="stack gap-24" hidden>
 
-    <header style="margin-bottom:28px">
-      <h1 style="font-size:clamp(1.7rem,4vw,2.4rem);margin-bottom:8px">Panel de administración</h1>
-      <p style="color:rgba(245,245,240,0.6);max-width:64ch">
-        Gestión de cuentas, banco de preguntas, material de estudio y reportes de rendimiento.
-      </p>
+    <header class="page-head">
+      <div class="page-head-txt">
+        <h1>Panel de administración</h1>
+        <p>Cuentas, banco de preguntas, material de estudio y reportes de rendimiento.</p>
+      </div>
     </header>
 
-    <div class="admin-tabs" role="tablist">
+    <div class="admin-tabs" role="tablist" aria-label="Secciones del panel">
       <button class="admin-tab active" data-panel="usuarios"  role="tab">Usuarios</button>
       <button class="admin-tab"        data-panel="preguntas" role="tab">Preguntas</button>
       <button class="admin-tab"        data-panel="material"  role="tab">Material</button>
@@ -178,7 +166,7 @@
 
     <!-- ══════════ USUARIOS (RF-03) ══════════ -->
     <section class="admin-panel" id="panel-usuarios">
-      <div class="toolbar">
+      <div class="toolbar clay">
         <div class="input-group">
           <label for="u-buscar">Buscar</label>
           <input type="search" id="u-buscar" class="input-field" placeholder="Nombre o correo">
@@ -232,7 +220,7 @@
 
     <!-- ══════════ PREGUNTAS (RF-04) ══════════ -->
     <section class="admin-panel" id="panel-preguntas" hidden>
-      <div class="toolbar">
+      <div class="toolbar clay">
         <div class="input-group">
           <label for="p-buscar">Buscar en el enunciado</label>
           <input type="search" id="p-buscar" class="input-field" placeholder="Ej: Constitución de 1991">
@@ -246,8 +234,8 @@
             <option value="dificil">Difícil</option>
           </select>
         </div>
-        <button id="p-refrescar" class="btn btn-outline btn-sm">Buscar</button>
-        <button id="p-nueva" class="btn btn-primary btn-sm">+ Nueva pregunta</button>
+        <button id="p-refrescar" class="btn btn-secondary btn-sm">Buscar</button>
+        <button id="p-nueva" class="btn btn-primary btn-sm"><i data-icon="plus" data-size="16"></i>Nueva pregunta</button>
       </div>
 
       <div class="tabla-wrap">
@@ -278,15 +266,15 @@
 
     <!-- ══════════ MATERIAL (RF-04) ══════════ -->
     <section class="admin-panel" id="panel-material" hidden>
-      <div class="toolbar">
+      <div class="toolbar clay">
         <div class="input-group">
           <label for="m-nodo">Nodo de aprendizaje</label>
           <select id="m-nodo" class="input-field">
             <option value="">Todos los nodos</option>
           </select>
         </div>
-        <button id="m-refrescar" class="btn btn-outline btn-sm">Filtrar</button>
-        <button id="m-nuevo" class="btn btn-primary btn-sm">+ Nuevo material</button>
+        <button id="m-refrescar" class="btn btn-secondary btn-sm">Filtrar</button>
+        <button id="m-nuevo" class="btn btn-primary btn-sm"><i data-icon="plus" data-size="16"></i>Nuevo material</button>
       </div>
 
       <div class="tabla-wrap">
@@ -309,7 +297,7 @@
 
     <!-- ══════════ REPORTES (caso de uso 4.7) ══════════ -->
     <section class="admin-panel" id="panel-reportes" hidden>
-      <div class="toolbar no-imprimir">
+      <div class="toolbar clay no-imprimir">
         <div class="input-group">
           <label for="r-desde">Desde</label>
           <input type="date" id="r-desde" class="input-field">
@@ -319,8 +307,8 @@
           <input type="date" id="r-hasta" class="input-field">
         </div>
         <button id="r-generar"  class="btn btn-primary btn-sm">Generar reporte</button>
-        <button id="r-csv"      class="btn btn-outline btn-sm">Descargar CSV</button>
-        <button id="r-imprimir" class="btn btn-outline btn-sm">Imprimir / Guardar PDF</button>
+        <button id="r-csv"      class="btn btn-secondary btn-sm">Descargar CSV</button>
+        <button id="r-imprimir" class="btn btn-secondary btn-sm">Imprimir / Guardar PDF</button>
       </div>
 
       <div id="r-resultado">
@@ -456,7 +444,8 @@
 <script src="js/config.js?v=1.0.3"></script>
 <script src="js/api.js?v=1.0.3"></script>
 <script src="js/state.js?v=1.0.3"></script>
-<script src="js/ui.js?v=1.0.3"></script>
+<script src="js/ui.js?v=2.1.0"></script>
+<script src="js/shell.js?v=2.1.0"></script>
 <script src="js/pages/page-admin.js?v=1.0.3"></script>
 <script src="js/app.js?v=1.0.3"></script>
 </body>

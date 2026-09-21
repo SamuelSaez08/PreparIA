@@ -2,363 +2,178 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PreparIA — Domina el ICFES</title>
-  <meta name="description" content="Prepárate para el ICFES con simulacros inteligentes, análisis de progreso y rutas de estudio personalizadas. Únete a +12.000 estudiantes.">
-  <meta property="og:title"       content="PreparIA — Domina el ICFES">
-  <meta property="og:description" content="Simulacros, análisis con IA y seguimiento de progreso para el ICFES. Gratis.">
-  <meta property="og:type"        content="website">
-  <meta property="og:url"         content="https://prepar-ia.vercel.app">
-  <meta property="og:image"       content="https://prepar-ia.vercel.app/og-cover.png">
-  <meta name="twitter:card"       content="summary_large_image">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>PreparIA — Prepárate para el ICFES con IA</title>
+  <meta name="description" content="Prepárate para el ICFES Saber 11: una ruta por temas de Ciencias Sociales, simulacros de 10 preguntas con explicación de cada respuesta y estadísticas de tu avance.">
+  <meta name="theme-color" content="#0A0A1A">
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎓</text></svg>">
-  <link rel="canonical"           href="https://prepar-ia.vercel.app">
-  <link rel="stylesheet" href="css/styles.css">
-  <style>
-    /* ── Index-specific ── */
-    .stat-strip {
-      display: flex; gap: 0;
-      background: var(--acid);
-      border: var(--border);
-      border-radius: var(--radius-lg);
-      overflow: hidden;
-      box-shadow: var(--shadow-solid-lg);
-    }
-    .stat-strip-item {
-      flex: 1;
-      padding: 24px 20px;
-      text-align: center;
-      border-right: 2px solid rgba(10,10,26,0.2);
-    }
-    .stat-strip-item:last-child { border-right: none; }
-    .stat-strip-item .num { font-size: 2rem; font-weight: 800; color: var(--ink); line-height: 1; }
-    .stat-strip-item .lbl { font-size: 0.875rem; font-weight: 700; color: rgba(10,10,26,0.65); margin-top: 4px; }
-
-    .benefit-card {
-      padding: 32px;
-      background: var(--ink-soft);
-      border: 2px solid rgba(245,245,240,0.1);
-      border-radius: var(--radius-xl);
-      transition: all var(--transition);
-    }
-    .benefit-card:hover {
-      border-color: var(--acid);
-      transform: translateY(-4px);
-      box-shadow: var(--shadow-solid), var(--shadow-clay);
-    }
-
-    .testimonial {
-      background: var(--ink-soft);
-      border: 2px solid rgba(245,245,240,0.1);
-      border-radius: var(--radius-xl);
-      padding: 28px;
-      position: relative;
-    }
-    .testimonial::before {
-      content: '"';
-      position: absolute;
-      top: -10px; left: 20px;
-      font-size: 5rem;
-      color: var(--acid);
-      line-height: 1;
-      font-weight: 800;
-    }
-    .testimonial-author { display: flex; align-items: center; gap: 12px; margin-top: 20px; }
-    .avatar {
-      width: 42px; height: 42px;
-      border-radius: 50%;
-      background: var(--acid);
-      display: flex; align-items: center; justify-content: center;
-      font-weight: 800; color: var(--ink); font-size: 1rem;
-      flex-shrink: 0;
-    }
-
-    .cta-section {
-      background: linear-gradient(135deg, var(--ink-soft), var(--ink-muted));
-      border: 2px solid var(--acid);
-      border-radius: var(--radius-xl);
-      padding: 64px 48px;
-      text-align: center;
-      box-shadow: var(--shadow-solid-lg), var(--shadow-glow);
-      position: relative;
-      overflow: hidden;
-    }
-    .cta-section::before {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background: radial-gradient(circle at 50% 0%, rgba(191,255,0,0.1), transparent 60%);
-      pointer-events: none;
-    }
-
-    .footer {
-      border-top: 2px solid rgba(245,245,240,0.07);
-      padding: 40px 0;
-      margin-top: 80px;
-    }
-    .footer-grid {
-      display: grid;
-      grid-template-columns: 2fr 1fr 1fr;
-      gap: 48px;
-    }
-    .footer-links { display: flex; flex-direction: column; gap: 10px; }
-    .footer-links a { color: rgba(245,245,240,0.5); font-size: 0.9rem; transition: color 0.2s; }
-    .footer-links a:hover { color: var(--acid); }
-
-    .nav-logged-banner {
-      background: var(--acid-glow);
-      border: 2px solid var(--acid);
-      border-radius: var(--radius-md);
-      padding: 14px 20px;
-      display: none;
-      align-items: center;
-      gap: 12px;
-      font-weight: 700;
-      color: var(--acid);
-      margin-bottom: 32px;
-    }
-
-    @media (max-width: 768px) {
-      .footer-grid { grid-template-columns: 1fr; gap: 32px; }
-      .stat-strip { flex-direction: column; }
-      .stat-strip-item { border-right: none; border-bottom: 2px solid rgba(10,10,26,0.2); }
-      .stat-strip-item:last-child { border-bottom: none; }
-      .cta-section { padding: 40px 24px; }
-    }
-  </style>
+  <link rel="stylesheet" href="css/styles.css?v=2">
+  <link rel="stylesheet" href="css/clay.css?v=2.1.0">
 </head>
-<body>
+<body class="v2" data-sin-nav>
 
-<!-- ── NAVBAR ── -->
-<nav class="navbar">
-  <div class="container">
-    <a href="index.html" class="nav-logo">Prepar<span>IA</span></a>
-    <ul class="nav-links">
-      <li><a href="#beneficios">Beneficios</a></li>
-      <li><a href="#como-funciona">Cómo funciona</a></li>
-      <li><a href="login.html" class="btn btn-outline btn-sm">Iniciar sesión</a></li>
-      <li><a href="registro.html" class="btn btn-primary btn-sm">Registrarse</a></li>
-    </ul>
+<nav class="pub-nav" aria-label="Principal">
+  <a href="index.html" class="side-logo" aria-label="PreparIA, inicio">
+    <span class="side-logo-mark"><i data-icon="spark" data-stroke="2.2"></i></span>
+    <span class="side-logo-text">Prepar<span>IA</span></span>
+  </a>
+  <div class="pub-links">
+    <a href="#incluye" class="btn btn-text hide-sm">Qué incluye</a>
+    <a href="#como-funciona" class="btn btn-text hide-sm">Cómo funciona</a>
+    <a href="login.html" class="btn btn-text hide-xs">Iniciar sesión</a>
+    <a href="registro.html" class="btn btn-primary btn-sm">Crear cuenta</a>
   </div>
 </nav>
 
-<!-- ── HERO ── -->
-<section class="hero">
-  <div class="hero-blob"></div>
-  <div class="container">
+<main>
+  <div class="pub-wrap">
 
-    <div id="logged-in-banner" class="nav-logged-banner">
-      <span>🎓</span>
-      <span>Ya tienes sesión activa —</span>
-      <a href="dashboard.html" class="btn btn-ghost btn-sm">Ir a Inicio →</a>
-    </div>
+    <!-- ── HERO ── -->
+    <section class="hero2" aria-labelledby="hero-t">
+      <div>
+        <div id="logged-in-banner" class="notice" role="status" style="margin-bottom:24px">
+          <span class="inline"><i data-icon="check" data-size="18"></i>Ya tienes una sesión abierta.</span>
+          <a href="dashboard.html" class="btn btn-primary btn-sm"><span>Ir a mi inicio</span><i data-icon="arrow" data-size="16"></i></a>
+        </div>
+        <span class="chip"><i data-icon="target" data-size="16"></i>ICFES Saber 11 · Ciencias Sociales</span>
+        <h1 id="hero-t">Domina el<br><span>ICFES</span> con IA</h1>
+        <p class="hero2-desc">Una ruta por temas que te dice qué ya dominas y qué te falta, simulacros que se corrigen solos y la explicación de cada respuesta.</p>
+        <div class="hero2-ctas">
+          <a href="registro.html" class="btn btn-primary btn-lg"><span>Empezar gratis</span><i data-icon="arrow" data-size="18"></i></a>
+          <a href="login.html" class="btn btn-secondary btn-lg">Ya tengo cuenta</a>
+        </div>
+      </div>
 
-    <div class="hero-eyebrow">
-      <span>🏆</span> Especializado en ICFES Colombia
-    </div>
-    <h1 class="hero-title fade-in-up">
-      Domina el<br>
-      <span class="accent">ICFES</span> con IA
-    </h1>
-    <p class="hero-desc fade-in-up delay-1">
-      PreparIA es la plataforma inteligente diseñada para que los estudiantes colombianos
-      conquisten el examen de Estado. Practica, aprende y mejora con simulacros
-      tipo ICFES y estadísticas en tiempo real.
-    </p>
-    <div class="hero-ctas fade-in-up delay-2">
-      <a href="registro.html" class="btn btn-primary btn-lg">Empezar gratis →</a>
-      <a href="login.html" class="btn btn-outline btn-lg">Ya tengo cuenta</a>
-    </div>
-
-    <!-- Stats strip -->
-    <div class="stat-strip mt-xl fade-in-up delay-3">
-      <div class="stat-strip-item">
-        <div class="num">+12K</div>
-        <div class="lbl">Estudiantes activos</div>
-      </div>
-      <div class="stat-strip-item">
-        <div class="num">98%</div>
-        <div class="lbl">Mejoran su puntaje</div>
-      </div>
-      <div class="stat-strip-item">
-        <div class="num">5</div>
-        <div class="lbl">Áreas cubiertas</div>
-      </div>
-      <div class="stat-strip-item">
-        <div class="num">+500</div>
-        <div class="lbl">Preguntas en banco</div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- ── BENEFICIOS ── -->
-<section class="mt-xl" id="beneficios">
-  <div class="container">
-    <div class="text-center mb-lg">
-      <div class="hero-eyebrow" style="display:inline-flex">📚 ¿Por qué PreparIA?</div>
-      <h2 class="mt-md">Todo lo que necesitas<br>para <span class="accent">brillar</span></h2>
-    </div>
-    <div class="grid-3">
-      <div class="benefit-card fade-in-up delay-1">
-        <div class="feature-icon">🧠</div>
-        <h4>Árbol de conocimiento</h4>
-        <p class="mt-sm">Navega por los temas de Ciencias Sociales de forma visual e interactiva. Expande conceptos, agrega notas y domina cada subtema.</p>
-      </div>
-      <div class="benefit-card fade-in-up delay-2">
-        <div class="feature-icon">⚡</div>
-        <h4>Simulacros tipo ICFES</h4>
-        <p class="mt-sm">Practica con preguntas de selección múltiple de formato oficial. Temporizador incluido para simular la presión real del examen.</p>
-      </div>
-      <div class="benefit-card fade-in-up delay-3">
-        <div class="feature-icon">📊</div>
-        <h4>Estadísticas detalladas</h4>
-        <p class="mt-sm">Visualiza tu progreso con gráficos de puntajes, historial de simulacros y análisis de tus áreas más débiles.</p>
-      </div>
-      <div class="benefit-card fade-in-up delay-1">
-        <div class="feature-icon">🔥</div>
-        <h4>Racha de estudio</h4>
-        <p class="mt-sm">Mantén tu motivación con un sistema de rachas diarias. Estudia cada día y ve crecer tu racha hasta alcanzar tus metas.</p>
-      </div>
-      <div class="benefit-card fade-in-up delay-2">
-        <div class="feature-icon">🎯</div>
-        <h4>Retroalimentación inmediata</h4>
-        <p class="mt-sm">Al finalizar cada simulacro, revisa qué preguntas respondiste mal y entiende por qué con explicaciones detalladas.</p>
-      </div>
-      <div class="benefit-card fade-in-up delay-3">
-        <div class="feature-icon">🚀</div>
-        <h4>Sin complicaciones</h4>
-        <p class="mt-sm">Interfaz rápida y limpia. Sin publicidad, sin distracciones. Solo tú y tu preparación para el ICFES.</p>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- ── CÓMO FUNCIONA ── -->
-<section class="mt-xl" id="como-funciona">
-  <div class="container">
-    <div class="text-center mb-lg">
-      <div class="hero-eyebrow" style="display:inline-flex">🗺️ Paso a paso</div>
-      <h2 class="mt-md">Así de <span class="accent">simple</span></h2>
-    </div>
-    <div class="grid-3">
-      <div class="card text-center fade-in-up delay-1">
-        <div style="font-size:3rem;margin-bottom:16px">1️⃣</div>
-        <h4>Regístrate gratis</h4>
-        <p class="mt-sm">Crea tu cuenta en menos de 2 minutos. Solo necesitas tu nombre, correo y grado escolar.</p>
-      </div>
-      <div class="card text-center fade-in-up delay-2">
-        <div style="font-size:3rem;margin-bottom:16px">2️⃣</div>
-        <h4>Estudia los temas</h4>
-        <p class="mt-sm">Usa el árbol de conocimiento para repasar Historia, Geografía, Política y Economía.</p>
-      </div>
-      <div class="card text-center fade-in-up delay-3">
-        <div style="font-size:3rem;margin-bottom:16px">3️⃣</div>
-        <h4>Practica y mejora</h4>
-        <p class="mt-sm">Genera simulacros, analiza tus estadísticas y sube tu puntaje hasta alcanzar tu meta.</p>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- ── TESTIMONIALES ── -->
-<section class="mt-xl">
-  <div class="container">
-    <h2 class="text-center mb-lg">Estudiantes que <span class="accent">ya triunfaron</span></h2>
-    <div class="grid-3">
-      <div class="testimonial fade-in-up delay-1">
-        <p style="padding-top:28px">Subí 40 puntos en Ciencias Sociales en solo un mes de práctica diaria con PreparIA. Los simulacros son muy parecidos al examen real.</p>
-        <div class="testimonial-author">
-          <div class="avatar">S</div>
-          <div>
-            <div style="font-weight:700;font-size:0.9rem">Sofía Martínez</div>
-            <div class="muted">Grado 11 — Bogotá</div>
+      <!-- Vista de la app: así se ve el inicio de un estudiante -->
+      <div class="hero2-art" aria-hidden="true">
+        <div class="feat stack gap-16" style="padding:26px 28px">
+          <span class="lbl acid">Continúa tu ruta</span>
+          <div class="inline" style="gap:18px">
+            <span class="next-node" style="width:64px;height:64px"><i data-icon="book" data-size="26"></i></span>
+            <div class="stack gap-4">
+              <strong style="font-size:1.375rem;letter-spacing:-0.02em">Constitución de 1991</strong>
+              <span class="t3" style="font-size:.8125rem;font-weight:600">10 preguntas · 20 minutos</span>
+            </div>
+          </div>
+          <div class="stack gap-8">
+            <div class="between" style="font-size:.8125rem"><span class="t2" style="font-weight:600">Dominio del tema</span><strong>45%</strong></div>
+            <div class="well bar"><span class="amber" style="width:45%"></span></div>
+          </div>
+          <span class="btn btn-primary" style="align-self:flex-start;pointer-events:none"><i data-icon="play" data-size="16"></i>Practicar este tema</span>
+        </div>
+        <div class="clay stack gap-12" style="padding:20px 22px;max-width:360px">
+          <div class="between"><span class="lbl">Racha de estudio</span><span style="color:var(--amber);display:flex"><i data-icon="flame"></i></span></div>
+          <div class="week" style="gap:6px">
+            <div class="week-day"><span class="week-dot"></span><small>L</small></div>
+            <div class="week-day done"><span class="week-dot"><i data-icon="check" data-size="14" data-stroke="2.6"></i></span><small>M</small></div>
+            <div class="week-day done"><span class="week-dot"><i data-icon="check" data-size="14" data-stroke="2.6"></i></span><small>X</small></div>
+            <div class="week-day done"><span class="week-dot"><i data-icon="check" data-size="14" data-stroke="2.6"></i></span><small>J</small></div>
+            <div class="week-day"><span class="week-dot"></span><small>V</small></div>
+            <div class="week-day"><span class="week-dot"></span><small>S</small></div>
+            <div class="week-day today"><span class="week-dot"></span><small>Hoy</small></div>
           </div>
         </div>
       </div>
-      <div class="testimonial fade-in-up delay-2">
-        <p style="padding-top:28px">El árbol de temas me ayudó a organizar todo lo que necesitaba estudiar. Ahora entiendo la historia de Colombia de forma estructurada.</p>
-        <div class="testimonial-author">
-          <div class="avatar" style="background:var(--sky);color:var(--ink)">C</div>
-          <div>
-            <div style="font-weight:700;font-size:0.9rem">Carlos Duarte</div>
-            <div class="muted">Grado 11 — Medellín</div>
-          </div>
-        </div>
-      </div>
-      <div class="testimonial fade-in-up delay-3">
-        <p style="padding-top:28px">La racha diaria me motivó a estudiar todos los días. Terminé con 32 días seguidos y un puntaje de 85 en el ICFES real. ¡Gracias!</p>
-        <div class="testimonial-author">
-          <div class="avatar" style="background:var(--coral);color:var(--white)">V</div>
-          <div>
-            <div style="font-weight:700;font-size:0.9rem">Valentina López</div>
-            <div class="muted">Grado 11 — Cali</div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
+    </section>
 
-<!-- ── CTA ── -->
-<section class="mt-xl">
-  <div class="container">
-    <div class="cta-section">
-      <div class="hero-eyebrow" style="display:inline-flex;margin-bottom:20px">🎓 ¿Listo para empezar?</div>
-      <h2>Tu mejor puntaje<br><span class="accent">te está esperando</span></h2>
-      <p class="mt-md" style="max-width:500px;margin:16px auto 36px">
-        Únete a miles de estudiantes colombianos que ya están mejorando su puntaje ICFES con PreparIA. Gratis, sin publicidad, sin excusas.
-      </p>
-      <div class="flex justify-center gap-lg flex-wrap">
-        <a href="registro.html" class="btn btn-primary btn-lg">Crear cuenta gratis →</a>
-        <a href="login.html" class="btn btn-outline btn-lg">Ya tengo cuenta</a>
-      </div>
-    </div>
-  </div>
-</section>
+    <!-- ── Hechos concretos del producto (sin cifras de usuarios) ── -->
+    <section class="facts-strip" aria-label="Cómo es PreparIA">
+      <div class="clay"><i data-icon="route" data-size="22"></i><strong>Ruta por temas</strong><small>Unidades y temas de Ciencias Sociales con tu dominio en cada uno.</small></div>
+      <div class="clay"><i data-icon="clock" data-size="22"></i><strong>10 preguntas, 20 minutos</strong><small>Simulacros con el formato de selección múltiple del ICFES.</small></div>
+      <div class="clay"><i data-icon="msg" data-size="22"></i><strong>Explicación de cada respuesta</strong><small>Al entregar ves por qué acertaste o fallaste.</small></div>
+      <div class="clay"><i data-icon="shield" data-size="22"></i><strong>Gratis y sin publicidad</strong><small>Solo tú y tu preparación.</small></div>
+    </section>
 
-<!-- ── FOOTER ── -->
-<footer class="footer">
-  <div class="container">
-    <div class="footer-grid">
-      <div>
-        <div class="nav-logo mb-md">Prepar<span style="color:var(--acid)">IA</span></div>
-        <p style="max-width:320px;font-size:0.9rem">La plataforma de preparación ICFES para estudiantes colombianos. Practica, aprende y conquista el examen.</p>
+    <!-- ── QUÉ INCLUYE ── -->
+    <section class="pub-sec" id="incluye" aria-labelledby="inc-t">
+      <div class="pub-head">
+        <span class="chip"><i data-icon="list" data-size="16"></i>Qué incluye</span>
+        <h2 id="inc-t">Todo lo que necesitas para <span>subir tu puntaje</span></h2>
       </div>
-      <div>
-        <div style="font-weight:800;font-size:0.8rem;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:16px;color:var(--acid)">Plataforma</div>
-        <div class="footer-links">
-          <a href="dashboard.html">Inicio</a>
-          <a href="simulacros.html">Simulacros</a>
-          <a href="ciencias-sociales.html">Ciencias Sociales</a>
-          <a href="estadisticas.html">Estadísticas</a>
-        </div>
+      <div class="benefits">
+        <article class="clay benefit">
+          <span class="ico-box"><i data-icon="route" data-size="24"></i></span>
+          <h3>Ruta de aprendizaje</h3>
+          <p>Los temas bajan como un camino. Cada uno muestra si lo dominas, lo estás practicando o aún no lo empiezas.</p>
+        </article>
+        <article class="clay benefit">
+          <span class="ico-box"><i data-icon="spark" data-size="24"></i></span>
+          <h3>Simulacros con IA</h3>
+          <p>Cada simulacro trae preguntas nuevas, mezcladas en el orden y la dificultad del examen real.</p>
+        </article>
+        <article class="clay benefit">
+          <span class="ico-box"><i data-icon="target" data-size="24"></i></span>
+          <h3>Práctica por tema</h3>
+          <p>¿Te cuesta un tema? Practícalo solo con sus preguntas hasta llevarlo a 80% de dominio.</p>
+        </article>
+        <article class="clay benefit">
+          <span class="ico-box"><i data-icon="chart" data-size="24"></i></span>
+          <h3>Estadísticas útiles</h3>
+          <p>Tu puntaje a lo largo del tiempo y el tema que más te conviene reforzar ahora.</p>
+        </article>
+        <article class="clay benefit">
+          <span class="ico-box"><i data-icon="msg" data-size="24"></i></span>
+          <h3>Retroalimentación inmediata</h3>
+          <p>Al terminar revisas pregunta por pregunta, con la explicación de la respuesta correcta.</p>
+        </article>
+        <article class="clay benefit">
+          <span class="ico-box"><i data-icon="trophy" data-size="24"></i></span>
+          <h3>Racha y ranking semanal</h3>
+          <p>Practicar cada día suma. El ranking se reinicia cada lunes, así que todos arrancan de cero.</p>
+        </article>
       </div>
-      <div>
-        <div style="font-weight:800;font-size:0.8rem;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:16px;color:var(--acid)">Cuenta</div>
-        <div class="footer-links">
-          <a href="registro.html">Registrarse</a>
-          <a href="login.html">Iniciar sesión</a>
-        </div>
+    </section>
+
+    <!-- ── CÓMO FUNCIONA ── -->
+    <section class="pub-sec" id="como-funciona" aria-labelledby="cf-t" style="padding-top:0">
+      <div class="pub-head">
+        <span class="chip"><i data-icon="map" data-size="16"></i>Paso a paso</span>
+        <h2 id="cf-t">Así de <span>simple</span></h2>
       </div>
+      <ol class="steps" style="list-style:none;margin:0;padding:0">
+        <li class="clay step"><span class="step-n">1</span><h3>Crea tu cuenta</h3><p>Solo necesitas tu nombre, tu correo, tu grado y tu colegio.</p></li>
+        <li class="clay step"><span class="step-n">2</span><h3>Sigue tu ruta</h3><p>Elige un tema y practícalo con preguntas del banco. Tu dominio se actualiza solo.</p></li>
+        <li class="clay step"><span class="step-n">3</span><h3>Mídete con simulacros</h3><p>Haz simulacros completos, revisa tus errores y mira cómo sube tu puntaje.</p></li>
+      </ol>
+    </section>
+
+    <!-- ── CTA ── -->
+    <section class="feat cta2" aria-labelledby="cta-t">
+      <span class="chip"><i data-icon="flame" data-size="16"></i>Tu primera racha empieza hoy</span>
+      <h2 id="cta-t">Tu mejor puntaje<br><span>te está esperando</span></h2>
+      <p>Gratis, sin publicidad y desde el primer tema que elijas.</p>
+      <div class="hero2-ctas" style="justify-content:center;margin-top:8px">
+        <a href="registro.html" class="btn btn-primary btn-lg"><span>Crear cuenta gratis</span><i data-icon="arrow" data-size="18"></i></a>
+        <a href="login.html" class="btn btn-secondary btn-lg">Ya tengo cuenta</a>
+      </div>
+    </section>
+  </div>
+</main>
+
+<footer class="foot2">
+  <div class="pub-wrap foot2-in">
+    <div class="stack gap-12" style="max-width:320px">
+      <span class="side-logo-text">Prepar<span>IA</span></span>
+      <p class="t3" style="font-size:.9375rem;margin:0">Preparación para el ICFES Saber 11, tema por tema.</p>
+      <small>© 2026 PreparIA</small>
     </div>
-    <div class="divider"></div>
-    <div class="flex justify-between items-center" style="flex-wrap:wrap;gap:16px">
-      <p style="font-size: 0.875rem">© 2025 PreparIA. Hecho con 💚 para estudiantes colombianos.</p>
-      <div class="flex gap-md">
-        <span class="badge badge-acid">HTML5</span>
-        <span class="badge badge-outline">CSS3</span>
-        <span class="badge badge-outline">JS Vanilla</span>
+    <nav aria-label="Pie de página">
+      <div><span class="lbl acid">Plataforma</span>
+        <a href="dashboard.html">Inicio</a><a href="ciencias-sociales.html">Ciencias Sociales</a><a href="simulacros.html">Simulacros</a><a href="estadisticas.html">Estadísticas</a>
       </div>
-    </div>
+      <div><span class="lbl acid">Cuenta</span>
+        <a href="registro.html">Crear cuenta</a><a href="login.html">Iniciar sesión</a>
+      </div>
+    </nav>
   </div>
 </footer>
 
-<script src="js/config.js?v=1.0.2"></script>
-<script src="js/api.js?v=1.0.2"></script>
-<script src="js/state.js?v=1.0.2"></script>
-<script src="js/ui.js?v=1.0.2"></script>
-<script src="js/pages/page-index.js?v=1.0.2"></script>
-<script src="js/app.js?v=1.0.2"></script>
+<script src="js/config.js?v=2.1.0"></script>
+<script src="js/api.js?v=2.1.0"></script>
+<script src="js/state.js?v=2.1.0"></script>
+<script src="js/ui.js?v=2.1.0"></script>
+<script src="js/shell.js?v=2.1.0"></script>
+<script src="js/pages/page-index.js?v=2.1.0"></script>
+<script src="js/app.js?v=2.1.0"></script>
 </body>
 </html>

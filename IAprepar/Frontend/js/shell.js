@@ -46,6 +46,11 @@ const Icon = (() => {
     plus:   '<path d="M12 5v14"/><path d="M5 12h14"/>',
     refresh:'<path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/>',
     users:  '<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7"/><path d="M18 14a6 6 0 0 1 3.5 6"/>',
+    eye:    '<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
+    eyeOff: '<path d="M3 3l18 18"/><path d="M10.6 5.1A10.4 10.4 0 0 1 12 5c6.5 0 10 7 10 7a17.6 17.6 0 0 1-3.2 4.2"/><path d="M6.6 6.6C3.9 8.4 2 12 2 12s3.5 7 10 7a9.7 9.7 0 0 0 5.4-1.6"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/>',
+    route:  '<circle cx="6" cy="19" r="2.5"/><circle cx="18" cy="5" r="2.5"/><path d="M8.5 19H17a3.5 3.5 0 0 0 0-7H7a3.5 3.5 0 0 1 0-7h8.5"/>',
+    msg:    '<path d="M21 12a8 8 0 0 1-11.8 7L4 20l1-4.6A8 8 0 1 1 21 12z"/>',
+    shield: '<path d="M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6z"/><path d="m9 12 2 2 4-4"/>',
     trash:  '<path d="M4 7h16"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M6 7l1 13h10l1-13"/><path d="M9 7V4h6v3"/>',
   };
 
@@ -125,8 +130,8 @@ const Shell = (() => {
     ${g.items.map((l) => navItem(l, l.href === cur)).join('')}
   </div>`).join('')}
   <div class="side-group" data-admin-only hidden>
-    <span class="side-label">Administración</span>
-    ${navItem({ href: 'admin.html', icon: 'tools', label: 'Panel de administración' }, cur === 'admin.html')}
+    <span class="side-label">Gestión</span>
+    ${navItem({ href: 'admin.html', icon: 'tools', label: 'Administración' }, cur === 'admin.html')}
   </div>
   <div class="side-spacer"></div>
   <div class="side-streak" data-shell-streak>
@@ -184,6 +189,8 @@ const Shell = (() => {
 
   const montar = () => {
     if (!document.body.classList.contains('v2')) return;
+    // Páginas públicas (landing, acceso, 404): mismo sistema visual, sin navegación de la app.
+    if (document.body.hasAttribute('data-sin-nav')) { Icon.hydrate(); return; }
     document.body.insertAdjacentHTML('afterbegin', lateral() + superiorMovil());
     document.body.insertAdjacentHTML('beforeend', pestanas());
     document.querySelectorAll('[data-logout]').forEach((b) => b.addEventListener('click', () => {

@@ -155,12 +155,19 @@ const UI = (() => {
   const initPasswordToggles = () => {
     document.querySelectorAll('[data-toggle-pwd]').forEach(btn => {
       const targetId = btn.getAttribute('data-toggle-pwd');
+      const pintar = (visible) => {
+        const conIconos = typeof Icon !== 'undefined';
+        btn.innerHTML = conIconos ? Icon.svg(visible ? 'eyeOff' : 'eye', 20) : (visible ? '🙈' : '👁️');
+        btn.setAttribute('aria-label', visible ? 'Ocultar contraseña' : 'Mostrar contraseña');
+        btn.setAttribute('aria-pressed', String(visible));
+      };
+      pintar(false);
       btn.addEventListener('click', () => {
         const input = document.getElementById(targetId);
         if (!input) return;
-        const isText = input.type === 'text';
-        input.type = isText ? 'password' : 'text';
-        btn.textContent = isText ? '👁️' : '🙈';
+        const visible = input.type === 'password';
+        input.type = visible ? 'text' : 'password';
+        pintar(visible);
       });
     });
   };
@@ -204,15 +211,15 @@ const Validate = (() => {
   const showError = (fieldId, msg) => {
     const field = document.getElementById(fieldId);
     const errEl = document.getElementById(fieldId + '-error');
-    if (field) field.classList.add('error');
-    if (errEl) { errEl.textContent = msg; errEl.classList.add('show'); }
+    if (field) { field.classList.add('error'); field.setAttribute('aria-invalid', 'true'); if (errEl) field.setAttribute('aria-describedby', errEl.id); }
+    if (errEl) { errEl.textContent = msg; errEl.classList.add('show'); errEl.setAttribute('role', 'alert'); }
   };
 
   const clearError = (fieldId) => {
     const field = document.getElementById(fieldId);
     const errEl = document.getElementById(fieldId + '-error');
-    if (field) field.classList.remove('error');
-    if (errEl) errEl.classList.remove('show');
+    if (field) { field.classList.remove('error'); field.removeAttribute('aria-invalid'); }
+    if (errEl) { errEl.classList.remove('show'); errEl.textContent = ''; }
   };
 
   const clearAll = (fields) => fields.forEach(clearError);
