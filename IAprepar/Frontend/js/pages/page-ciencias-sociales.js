@@ -86,7 +86,21 @@ const PageCienciasSociales = {
   renderRuta() {
     const contenedor = document.getElementById('ruta-container');
     if (!contenedor) return;
-    RutaAprendizaje.render(contenedor, TreeManager.getTree(), this.progresoNodos);
+    RutaAprendizaje.render(contenedor, TreeManager.getTree(), this.progresoNodos, document.getElementById('ruta-panel'));
+    this.pintarResumen();
+  },
+
+  /** Franja de resumen: dominados / en progreso / sin practicar, con datos reales. */
+  pintarResumen() {
+    const temas = this.progresoNodos.filter((n) => n.id_padre != null && n.estado !== 'vacio');
+    const dom  = temas.filter((n) => n.estado === 'dominado').length;
+    const prog = temas.filter((n) => n.estado === 'en_progreso').length;
+    const sin  = temas.length - dom - prog;
+    const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+    set('rs-dom', dom); set('rs-total', temas.length);
+    set('rs-n-dom', dom); set('rs-n-prog', prog); set('rs-n-sin', sin);
+    const grow = (id, v) => { const el = document.getElementById(id); if (el) el.style.flexGrow = String(v); };
+    grow('rs-bar-dom', dom); grow('rs-bar-prog', prog); grow('rs-bar-sin', temas.length ? sin : 1);
   },
 
   async loadTree() {

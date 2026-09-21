@@ -8,6 +8,7 @@
   <meta name="robots" content="noindex, nofollow">
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎓</text></svg>">
   <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="css/clay.css?v=2.0.0">
   <style>
     .legend-dot {
       width: 12px;
@@ -405,144 +406,80 @@
   </style>
 </head>
 
-<body>
+<body class="v2">
 
-  <!-- ── NAVBAR ── -->
-  <nav class="navbar">
-    <div class="container">
-      <a href="index.html" class="nav-logo">Prepar<span>IA</span></a>
-      <div class="flex items-center gap-md">
-        <span style="font-size: 0.875rem;color:rgba(245,245,240,0.5)">Hola, <strong data-user-name
-            style="color:var(--white)">Estudiante</strong></span>
-        <button id="logout-btn" class="btn btn-outline btn-sm">Salir</button>
+<main class="page" id="main">
+  <header class="page-head">
+    <div class="page-head-txt">
+      <h1>Ciencias Sociales</h1>
+      <p>Tu ruta hacia el ICFES, tema por tema. Elige uno para practicar con preguntas del banco.</p>
+    </div>
+    <div class="page-head-actions">
+      <div class="vista-toggle" role="tablist" aria-label="Forma de ver los contenidos">
+        <button type="button" id="btn-vista-ruta" class="activa" role="tab" aria-selected="true"><i data-icon="map" data-size="16"></i>Ruta</button>
+        <button type="button" id="btn-vista-arbol" role="tab" aria-selected="false"><i data-icon="tree" data-size="16"></i>Árbol</button>
       </div>
     </div>
-  </nav>
+  </header>
 
-  <div class="app-layout">
-    <!-- ── SIDEBAR ── -->
-    <aside class="sidebar">
-      <div class="sidebar-section">
-        <div class="sidebar-label">Principal</div>
-        <a href="dashboard.html" class="sidebar-item" data-nav="dashboard.html">
-          <span class="icon">🏠</span> Inicio
-        </a>
-      </div>
-      <div class="sidebar-section">
-        <div class="sidebar-label">Materias</div>
-        <a href="ciencias-sociales.html" class="sidebar-item active" data-nav="ciencias-sociales.html">
-          <span class="icon">🌍</span> Ciencias Sociales
-        </a>
-      </div>
-      <div class="sidebar-section">
-        <div class="sidebar-label">Práctica</div>
-        <a href="simulacros.html" class="sidebar-item" data-nav="simulacros.html">
-          <span class="icon">📝</span> Simulacros
-        </a>
-        <a href="estadisticas.html" class="sidebar-item" data-nav="estadisticas.html">
-          <span class="icon">📊</span> Estadísticas
-        </a>
-        <a href="ranking.html" class="sidebar-item" data-nav="ranking.html">
-          <span class="icon">🏆</span> Ranking
-        </a>
-      </div>
-    </aside>
+  <!-- Resumen: cuántos temas domina y en qué estado están los demás -->
+  <section class="clay ruta-summary" aria-label="Resumen de tu avance">
+    <div class="inline" style="align-items:baseline;gap:8px">
+      <span class="big-num" style="font-size:1.75rem"><span id="rs-dom">0</span><span class="t4" style="color:var(--text-5)">/<span id="rs-total">0</span></span></span>
+      <span class="t3" style="font-size:.875rem;font-weight:700">temas dominados</span>
+    </div>
+    <div class="ruta-stack" aria-hidden="true">
+      <span id="rs-bar-dom" style="flex-grow:0;background:var(--acid)"></span>
+      <span id="rs-bar-prog" style="flex-grow:0;background:var(--amber)"></span>
+      <span id="rs-bar-sin" style="flex-grow:1;background:#26264F"></span>
+    </div>
+    <div class="ruta-legend">
+      <span class="status dominado">Dominado · <span id="rs-n-dom">0</span></span>
+      <span class="status en_progreso">En progreso · <span id="rs-n-prog">0</span></span>
+      <span class="status disponible">Sin practicar · <span id="rs-n-sin">0</span></span>
+    </div>
+  </section>
 
-    <!-- ── MAIN CONTENT ── -->
-    <main class="main-content">
-      <div class="page-header">
-        <div class="breadcrumb">Inicio → Materias → <span>Ciencias Sociales</span></div>
-        <div class="flex justify-between items-center" style="flex-wrap:wrap;gap:16px">
-          <div>
-            <h2>🌍 Ciencias Sociales</h2>
-            <p class="mt-sm">Explora los temas del ICFES de forma visual e interactiva.</p>
-          </div>
-          <div class="vista-toggle" role="tablist" aria-label="Forma de ver los contenidos">
-            <button type="button" id="btn-vista-ruta"  class="activa" role="tab" aria-selected="true">🗺️ Ruta</button>
-            <button type="button" id="btn-vista-arbol" role="tab" aria-selected="false">🌳 Árbol</button>
-          </div>
+  <!-- ══════════ VISTA RUTA ══════════ -->
+  <div id="vista-ruta">
+    <div class="ruta2">
+      <div id="ruta-container">
+        <div class="ruta-mensaje">Cargando tu ruta…</div>
+      </div>
+      <aside id="ruta-panel" class="feat ruta2-panel" aria-live="polite" hidden></aside>
+    </div>
+  </div>
 
-          <!-- Controles de edición del árbol: solo administradores (RF-04) -->
-          <div class="flex gap-md flex-wrap" data-admin-only hidden>
-            <button onclick="PageCienciasSociales.expandAll()" class="btn btn-ghost btn-sm">Expandir todo</button>
-            <button onclick="PageCienciasSociales.collapseAll()" class="btn btn-outline btn-sm">Colapsar</button>
-            <button id="reset-tree-btn" class="btn btn-sm"
-              style="background:rgba(255,107,107,0.1);color:var(--coral);border-color:var(--coral)">↺ Reiniciar</button>
-          </div>
+  <!-- ══════════ VISTA ÁRBOL ══════════ -->
+  <div id="vista-arbol" hidden>
+    <div class="stack gap-20">
+      <div class="between" style="flex-wrap:wrap">
+        <input type="search" class="search-nodes" id="tree-search" style="max-width:520px"
+          placeholder="Buscar un tema (Ej: Simón Bolívar, PIB, Amazonía)" aria-label="Buscar un tema en el árbol">
+        <!-- Controles de edición del árbol: solo administradores (RF-04) -->
+        <div class="page-head-actions" data-admin-only hidden>
+          <button onclick="PageCienciasSociales.expandAll()" class="btn btn-secondary btn-sm">Expandir todo</button>
+          <button onclick="PageCienciasSociales.collapseAll()" class="btn btn-secondary btn-sm">Colapsar</button>
+          <button id="reset-tree-btn" class="btn btn-danger btn-sm"><i data-icon="refresh" data-size="16"></i>Reiniciar</button>
         </div>
       </div>
 
-      <!-- ══════════ VISTA RUTA ══════════ -->
-      <div id="vista-ruta">
-        <div class="ruta-leyenda">
-          <span><i style="background:var(--acid)"></i>Dominado (80% o más)</span>
-          <span><i style="background:var(--amber)"></i>En progreso</span>
-          <span><i style="background:var(--ink-muted)"></i>Sin practicar</span>
-          <span><i style="background:rgba(245,245,240,0.08)"></i>Sin contenido aún</span>
-        </div>
-        <div id="ruta-container" class="ruta">
-          <div class="ruta-mensaje">Cargando tu ruta…</div>
-        </div>
-      </div>
-
-      <!-- ══════════ VISTA ÁRBOL ══════════ -->
-      <div id="vista-arbol" hidden>
-
-      <!-- Search bar -->
-      <div class="mb-lg">
-        <input type="text" class="search-nodes" id="tree-search"
-          placeholder="🔍  Buscar tema en el árbol... (Ej: Simón Bolívar, PIB, Amazonia)">
-      </div>
-
-      <!-- Legend -->
-      <div class="flex gap-lg mb-lg" style="flex-wrap:wrap">
-        <div class="flex items-center gap-sm" style="font-size:0.8rem;font-weight:600">
-          <div class="legend-dot" style="background:var(--acid)"></div> Categoría principal
-        </div>
-        <div class="flex items-center gap-sm" style="font-size:0.8rem;font-weight:600">
-          <div class="legend-dot" style="background:rgba(245,245,240,0.3)"></div> Subtema
-        </div>
-        <div class="flex items-center gap-sm" style="font-size:0.8rem;font-weight:600">
-          <div class="legend-dot" style="background:var(--sky)"></div> Nodo personalizado
-        </div>
-      </div>
-
-      <!-- Tree -->
-      <div class="card no-hover" style="padding:20px">
+      <div class="clay" style="padding:16px">
         <div id="tree-container" class="tree-container"></div>
       </div>
 
-      <!-- Stats bar -->
-      <div class="grid-4 mt-lg">
-        <div class="stat-card green" style="padding:18px">
-          <div class="stat-label">Categorías</div>
-          <div class="stat-value accent" style="font-size:1.8rem" id="count-cats">4</div>
-        </div>
-        <div class="stat-card" style="padding:18px">
-          <div class="stat-label">Temas totales</div>
-          <div class="stat-value" style="font-size:1.8rem" id="count-total">—</div>
-        </div>
-        <div class="stat-card sky" style="padding:18px">
-          <div class="stat-label">Nodos personalizados</div>
-          <div class="stat-value" style="color:var(--sky);font-size:1.8rem" id="count-custom">0</div>
-        </div>
-        <div class="stat-card amber" id="add-node-card" style="padding:18px;cursor:pointer; display:none;"
+      <div class="kpis" style="--cols:4">
+        <div class="clay kpi"><span class="lbl">Categorías</span><span class="big-num" id="count-cats">—</span></div>
+        <div class="clay kpi"><span class="lbl">Temas totales</span><span class="big-num" id="count-total">—</span></div>
+        <div class="clay kpi"><span class="lbl">Nodos personalizados</span><span class="big-num" id="count-custom">0</span></div>
+        <button type="button" class="clay kpi lift" id="add-node-card" style="display:none;cursor:pointer;text-align:left;font-family:inherit;color:inherit"
           onclick="PageCienciasSociales.showNodeTypeSelector()">
-          <div class="stat-label">Agregar nodo</div>
-          <div class="stat-value" style="color:var(--amber);font-size:1.8rem">+</div>
-        </div>
+          <span class="lbl">Agregar nodo</span><span class="big-num" style="color:var(--amber)">+</span>
+        </button>
       </div>
-      </div><!-- /vista-arbol -->
-    </main>
+    </div>
   </div>
-
-  <!-- Mobile Nav -->
-  <nav class="mobile-nav">
-    <a href="dashboard.html" class="mobile-nav-item"><span class="icon">🏠</span>Inicio</a>
-    <a href="ciencias-sociales.html" class="mobile-nav-item active"><span class="icon">🌍</span>Temas</a>
-    <a href="simulacros.html" class="mobile-nav-item"><span class="icon">📝</span>Simulacro</a>
-    <a href="ranking.html" class="mobile-nav-item"><span class="icon">🏆</span>Ranking</a>
-  </nav>
+</main>
 
   <!-- ── MODAL: Add Node ── -->
   <div class="modal-overlay" id="add-node-modal">
@@ -613,13 +550,16 @@
     </button>
   </div>
 
-  <script src="js/config.js?v=1.0.2"></script>
-  <script src="js/api.js?v=1.0.2"></script>
-  <script src="js/state.js?v=1.0.2"></script>
-  <script src="js/ui.js?v=1.0.2"></script>
-  <script src="js/ruta.js?v=1.0.3"></script>
-<script src="js/pages/page-ciencias-sociales.js?v=1.0.2"></script>
-  <script src="js/app.js?v=1.0.2"></script>
+
+  <script src="js/config.js?v=2.0.0"></script>
+  <script src="js/api.js?v=2.0.0"></script>
+  <script src="js/state.js?v=2.0.0"></script>
+  <script src="js/ui.js?v=2.0.0"></script>
+  <script src="js/shell.js?v=2.0.0"></script>
+  <script src="js/progreso-ruta.js?v=2.0.0"></script>
+  <script src="js/ruta.js?v=2.0.0"></script>
+  <script src="js/pages/page-ciencias-sociales.js?v=2.0.0"></script>
+  <script src="js/app.js?v=2.0.0"></script>
   <script>
     document.addEventListener('DOMContentLoaded', () => {
       // Search functionality
@@ -670,6 +610,8 @@
       setTimeout(() => {
         const total = document.querySelectorAll('.tree-node-header').length;
         const custom = document.querySelectorAll('.badge-sky').length;
+        const catsEl = document.getElementById('count-cats');
+        if (catsEl) catsEl.textContent = document.querySelectorAll('#tree-container > .tree-node').length;
         const totalEl = document.getElementById('count-total');
         const customEl = document.getElementById('count-custom');
         if (totalEl) totalEl.textContent = total;

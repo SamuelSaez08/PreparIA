@@ -1,163 +1,189 @@
 'use strict';
 
+/* ============================================================
+   PreparIA — Estadísticas (rediseño clay v2)
+
+   Cambios de fondo respecto a la versión anterior:
+   · "Qué mejorar" era un consejo al azar entre cuatro fijos. Ahora
+     "Dónde enfocarte" sale del tema practicado con menor dominio.
+   · Las barras por tema estaban escritas en el HTML. Ahora son las
+     unidades reales de la ruta, con el progreso de esta cuenta.
+   · La gráfica pasa de <canvas> a HTML: cada barra se puede
+     recorrer con teclado y anuncia su fecha y puntaje.
+   · El botón "Borrar historial" solo vaciaba una copia local; al
+     recargar, el servidor la devolvía igual. Se quitó para no
+     prometer algo que no ocurre.
+   ============================================================ */
+
 const PageEstadisticas = {
+  META: 70,
+
   async init() {
     Auth.requireAuth();
     Utils.setActiveNav();
     Utils.renderUserInNav();
-
     document.getElementById('logout-btn')?.addEventListener('click', () => Auth.logout());
 
-    await this.loadBackendData();
+    await Promise.allSettled([this.cargarResumenYHistorial(), this.cargarRuta()]);
   },
 
-  async loadBackendData() {
-    let stats      = { avg: 0, best: 0, total: 0 };
-    let streakData = { count: 0, longest: 0 };
+  async cargarResumenYHistorial() {
+    let stats = { total: 0, avg: 0, best: 0 };
+    let racha = 0;
 
     try {
-      const progresoRes = await ProgresoAPI.getProgreso();
-      const datos = progresoRes.datos || progresoRes;
-
-      const backendStats = datos.estadisticas || datos;
+      const res = await ProgresoAPI.getProgreso();
+      const datos = res.datos || res;
+      const b = datos.estadisticas || datos;
       stats = {
-        total: backendStats.total_intentos || backendStats.total || 0,
-        avg:   Math.round(backendStats.promedio_global || backendStats.promedio || 0),
-        best:  Math.round(backendStats.mejor_puntaje  || backendStats.best || 0),
+        total: b.total_intentos || 0,
+        avg: Math.round(b.promedio_global || 0),
+        best: Math.round(b.mejor_puntaje || 0),
       };
-      streakData = {
-        count:   datos.racha_actual || 0,
-        longest: datos.racha_maxima || backendStats.racha_maxima || 0,
-      };
-
+      racha = datos.racha_actual || 0;
       Streak.updateFromBackend(datos);
-
-      const progresoPorMateria = datos.progreso_por_materia || datos.materias || [];
-      if (progresoPorMateria.length) this.renderTopicBars(progresoPorMateria);
-
-      const actividadSemanal = datos.actividad_semanal || [];
-      if (actividadSemanal.length) this.renderHeatmapFromBackend(actividadSemanal);
-
+      if (typeof Shell !== 'undefined') Shell.setRacha(racha);
     } catch (err) {
-      console.warn('ProgresoAPI.getProgreso failed:', err);
+      stats = Simulacros.getStats();
+      racha = Streak.get().count || 0;
       if (err.networkError) UI.showToast('Sin conexión. Verifica tu internet.', 'error');
-      stats      = Simulacros.getStats();
-      const localStreak = Streak.get();
-      streakData = { count: localStreak.count, longest: localStreak.longest };
     }
 
     try {
-      const historialRes = await SimulacrosAPI.getHistorial({ por_pagina: 20 });
-      Simulacros.updateFromBackend(historialRes.datos || []);
+      const res = await SimulacrosAPI.getHistorial({ por_pagina: 20 });
+      Simulacros.updateFromBackend(res.datos || []);
     } catch (err) {
       console.warn('SimulacrosAPI.getHistorial failed:', err);
     }
+    const historial = Simulacros.getHistory();
 
-    const history = Simulacros.getHistory();
+    // La racha más larga se guarda en el navegador: si no hay registro,
+    // la actual es el mejor dato disponible.
+    const larga = Math.max(Streak.get().longest || 0, racha);
+    const mejorIntento = historial.find((h) => h.pct === stats.best);
 
-    const els = {
-      'stats-total':    stats.total,
-      'stats-promedio': stats.avg + '%',
-      'stats-mejor':    stats.best + '%',
-      'stats-racha':    streakData.longest || streakData.count,
-    };
-    Object.entries(els).forEach(([id, val]) => {
-      const el = document.getElementById(id);
-      if (el) el.textContent = val;
-    });
+    this.set('stats-total', stats.total);
+    this.set('stats-total-sub', historial.length ? `El último, el ${Utils.fechaCorta(historial[0].date)}` : 'Aún no has hecho ninguno');
+    this.set('stats-promedio', stats.total ? `${stats.avg}%` : '—');
+    this.set('stats-promedio-sub', !stats.total ? `Meta recomendada: ${this.META}%`
+      : stats.avg >= this.META ? `Sobre la meta de ${this.META}%` : `A ${this.META - stats.avg} puntos de la meta`);
+    this.set('stats-mejor', stats.total ? `${stats.best}%` : '—');
+    this.set('stats-mejor-sub', mejorIntento ? `El ${Utils.fechaCorta(mejorIntento.date)}` : ' ');
+    this.set('stats-racha', `${larga} ${larga === 1 ? 'día' : 'días'}`);
+    this.set('stats-racha-sub', `La actual es de ${racha}`);
 
-    const ringEl = document.getElementById('avg-score-ring');
-    if (ringEl) ringEl.innerHTML = UI.renderScoreRing(stats.avg);
-
-    const levelEl = document.getElementById('level-label');
-    if (levelEl) {
-      levelEl.textContent = Utils.scoreLabel(stats.avg);
-      levelEl.style.color = Utils.scoreColor(stats.avg);
-    }
-
-    const tipEl = document.getElementById('improve-tip');
-    if (tipEl && history.length) {
-      const tips = [
-        'Repasa Historia de Colombia',
-        'Practica preguntas de Geografía',
-        'Estudia la Constitución de 1991',
-        'Refuerza conceptos económicos',
-      ];
-      tipEl.textContent = tips[Math.floor(Math.random() * tips.length)];
-    }
-
-    if (history.length) {
-      const chartEmpty   = document.getElementById('chart-empty');
-      const chartWrapper = document.getElementById('chart-wrapper');
-      if (chartEmpty)   chartEmpty.style.display = 'none';
-      if (chartWrapper) chartWrapper.style.display = 'block';
-
-      const last8  = history.slice(0, 8).reverse();
-      const labels = last8.map(h => h.date?.split(' ')[0] || '');
-      const data   = last8.map(h => h.pct);
-      setTimeout(() => UI.renderBarChart('chart-scores', labels, data), 100);
-    }
-
-    this.renderTable(history);
+    this.pintarGrafica(historial);
+    this.pintarTabla(historial);
   },
 
-  renderTopicBars(materias) {
-    const container = document.getElementById('topic-bars');
-    if (!container) return;
+  /* ── Gráfica de barras en HTML ──────────────────────────────
+     Una sola serie, así que no lleva leyenda: el título la nombra.
+     Etiqueta directa solo en el mejor y en el último intento; el
+     resto aparece al pasar el cursor o el foco del teclado. */
+  pintarGrafica(historial) {
+    const cont = document.getElementById('chart-scores');
+    if (!cont) return;
+    const datos = historial.slice(0, 10).reverse();
+    if (!datos.length) return;
 
-    const colors = ['var(--acid)', 'var(--sky)', 'var(--amber)', 'var(--coral)'];
-    container.innerHTML = materias.map((m, i) => {
-      const nombre = m.nombre || m.materia || `Materia ${i + 1}`;
-      const pct    = Math.round(m.porcentaje || m.progreso || 0);
-      const color  = colors[i % colors.length];
-      return `
-        <div class="topic-bar">
-          <div class="topic-name">${nombre}</div>
-          <div class="topic-track">
-            <div class="topic-fill" style="width:${pct}%;background:${color}"></div>
-          </div>
-          <div class="topic-pct" style="color:${color}">${pct}%</div>
+    const corto = Utils.fechaCorta;
+    const ultimo = datos.length - 1;
+    const mejor = datos.reduce((bi, d, i) => (d.pct > datos[bi].pct ? i : bi), 0);
+
+    cont.innerHTML = `
+      <div class="chart2">
+        <div class="chart2-y" aria-hidden="true">
+          <span style="top:0">100</span><span style="top:50%">50</span><span style="top:100%">0</span>
         </div>
-      `;
-    }).join('');
+        <div class="chart2-plot">
+          <div class="chart2-grid" style="top:0"></div>
+          <div class="chart2-grid" style="top:50%"></div>
+          <div class="chart2-grid" style="top:100%;border-color:#2A2A50"></div>
+          <div class="chart2-goal" style="bottom:${this.META}%"></div>
+          <div class="chart2-bars" role="list" aria-label="Puntaje por simulacro, del más antiguo al más reciente">
+            ${datos.map((d, i) => {
+              const v = Math.max(0, Math.min(100, d.pct || 0));
+              return `
+              <div class="chart2-col" role="listitem" tabindex="0" aria-label="${Utils.sanitizeHTML(d.date)}: ${v}%, ${d.score} de ${d.total}">
+                <div class="chart2-bar" style="height:0" data-h="${v}"></div>
+                ${i === mejor || i === ultimo ? `<span class="chart2-val" style="bottom:calc(${v}% + 6px)">${v}%</span>` : ''}
+                <div class="chart2-tip" role="tooltip" style="bottom:calc(${v}% + 10px)"><small>${Utils.sanitizeHTML(d.date)}</small><strong>${v}% · ${d.score}/${d.total}</strong></div>
+              </div>`;
+            }).join('')}
+          </div>
+        </div>
+      </div>
+      <div class="chart2" style="margin-top:8px" aria-hidden="true">
+        <span></span>
+        <div class="chart2-x">${datos.map((d) => `<span>${Utils.sanitizeHTML(corto(d.date))}</span>`).join('')}</div>
+      </div>`;
+
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      cont.querySelectorAll('.chart2-bar[data-h]').forEach((b) => { b.style.height = `${b.dataset.h}%`; });
+    }));
   },
 
-  renderHeatmapFromBackend(actividad) {
-    const heatmap = document.getElementById('heatmap');
-    if (!heatmap) return;
-    heatmap.innerHTML = '';
-
-    const history = Simulacros.getHistory();
-    for (let i = 27; i >= 0; i--) {
-      const d = new Date();
-      d.setDate(d.getDate() - i);
-      const str = d.toISOString().split('T')[0];
-      const inActivity = actividad.includes(str);
-      const simCount   = history.filter(h => h.date?.includes(d.getDate())).length;
-      let level = 0;
-      if (inActivity) level = simCount >= 2 ? 3 : simCount === 1 ? 2 : 1;
-      const cell = document.createElement('div');
-      cell.className = `heat-cell level-${level}`;
-      cell.title = `${str}: ${inActivity ? 'Activo' : 'Inactivo'}`;
-      heatmap.appendChild(cell);
-    }
-  },
-
-  renderTable(history) {
+  pintarTabla(historial) {
     const tbody = document.getElementById('stats-tbody');
     if (!tbody) return;
-    if (!history.length) {
-      tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:rgba(245,245,240,0.3);padding:32px">Sin datos aún.</td></tr>`;
+    if (!historial.length) {
+      tbody.innerHTML = `<tr><td colspan="4"><div class="empty" style="padding:20px 0">Sin intentos todavía. <a href="simulacros.html">Haz el primero</a></div></td></tr>`;
       return;
     }
-    tbody.innerHTML = history.map((h, i) => `
+    const color = (p) => (p >= 80 ? 'var(--acid)' : p >= 60 ? 'var(--amber)' : 'var(--coral-soft)');
+    tbody.innerHTML = historial.slice(0, 8).map((h) => `
       <tr>
-        <td><span class="badge badge-outline">#${history.length - i}</span></td>
-        <td>${h.date}</td>
-        <td>${h.score} / ${h.total}</td>
-        <td style="color:${Utils.scoreColor(h.pct)};font-weight:800">${h.pct}%</td>
-        <td>${Utils.scoreLabel(h.pct)}</td>
-      </tr>
-    `).join('');
-  }
+        <td>${Utils.sanitizeHTML(h.date)}</td>
+        <td>${h.score}/${h.total}</td>
+        <td><span class="inline" style="gap:8px"><span style="width:8px;height:8px;border-radius:99px;background:${color(h.pct)}"></span><strong>${h.pct}%</strong></span></td>
+        <td class="num">${h.timeUsed ? Utils.formatTime(h.timeUsed) : '—'}</td>
+      </tr>`).join('');
+  },
+
+  /* ── Unidades y tema a reforzar ─────────────────────────── */
+  async cargarRuta() {
+    const foco = document.getElementById('foco');
+    const barras = document.getElementById('topic-bars');
+    try {
+      const ruta = await ProgresoRuta.cargar(1);
+
+      if (barras) {
+        barras.innerHTML = ruta.unidades.length
+          ? ruta.unidades.map((u) => ProgresoRuta.filaUnidad(u)).join('')
+          : `<div class="empty">Todavía no hay unidades cargadas.</div>`;
+        ProgresoRuta.animarBarras(barras);
+      }
+
+      if (!foco) return;
+      const t = ruta.masDebil || ruta.siguiente;
+      if (!t) {
+        foco.innerHTML = `
+          <span class="lbl acid">Dónde enfocarte</span>
+          <h2 style="font-size:1.5rem;letter-spacing:-0.02em">${ruta.temas.length ? 'Vas al día con todos los temas' : 'Aún no hay temas en la ruta'}</h2>
+          <p class="t3" style="font-size:.875rem;line-height:1.5">Un simulacro completo te dirá qué reforzar después.</p>
+          <a href="simulacros.html" class="btn btn-primary btn-block">${Icon.svg('clip', 18)}<span>Hacer un simulacro</span></a>`;
+        return;
+      }
+      const debil = ruta.masDebil && t.id === ruta.masDebil.id;
+      foco.innerHTML = `
+        <span class="lbl acid">Dónde enfocarte</span>
+        <div class="stack gap-8">
+          <h2 style="font-size:1.5rem;line-height:1.15;letter-spacing:-0.02em">${Utils.sanitizeHTML(t.nombre)}</h2>
+          <p class="t3" style="font-size:.875rem;line-height:1.5">${debil
+            ? `De los temas que ya practicaste, es el de menor dominio: ${t.porcentaje}%. Un par de prácticas aquí rinden más que repasar lo que ya dominas.`
+            : 'Es el siguiente tema de tu ruta y todavía no lo has practicado.'}</p>
+        </div>
+        ${t.preguntas > 0
+          ? `<button type="button" class="btn btn-primary btn-block" id="btn-foco">${Icon.svg('play', 18)}<span>Practicar este tema</span></button>`
+          : `<a href="ciencias-sociales.html" class="btn btn-secondary btn-block">${Icon.svg('map', 18)}<span>Ver en la ruta</span></a>`}`;
+      const btn = document.getElementById('btn-foco');
+      if (btn) btn.addEventListener('click', () => RutaAprendizaje.practicar(t.id, t.nombre, btn));
+    } catch (err) {
+      console.warn('No se pudo cargar el progreso por tema:', err);
+      if (barras) barras.innerHTML = `<div class="empty">No se pudo cargar tu avance por unidad.</div>`;
+      if (foco) foco.innerHTML = `<span class="lbl acid">Dónde enfocarte</span><p class="t3">No se pudo calcular ahora mismo.</p>`;
+    }
+  },
+
+  set(id, v) { const el = document.getElementById(id); if (el) el.textContent = v; },
 };

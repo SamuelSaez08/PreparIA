@@ -2,236 +2,89 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>PreparIA — Ranking</title>
   <meta name="robots" content="noindex, nofollow">
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎓</text></svg>">
   <link rel="stylesheet" href="css/styles.css?v=2">
-  <link rel="stylesheet" href="css/ranking.css?v=2">
+  <link rel="stylesheet" href="css/ranking.css?v=2">  <!-- toasts de puntos y confeti -->
+  <link rel="stylesheet" href="css/clay.css?v=2.0.0">
 </head>
-<body>
+<body class="v2">
 
-<!-- ── NAVBAR ── -->
-<nav class="navbar">
-  <div class="container">
-    <a href="index.html" class="nav-logo">Prepar<span>IA</span></a>
-    <div class="flex items-center gap-md">
-      <span style="font-size:0.85rem;color:rgba(245,245,240,0.5)">Hola, <strong data-user-name style="color:var(--white)">Estudiante</strong></span>
-      <button onclick="Auth.logout()" class="btn btn-outline btn-sm">Salir</button>
+<main class="page" id="main">
+  <header class="page-head">
+    <div class="page-head-txt">
+      <h1>Ranking</h1>
+      <p id="rank-nota">Los puntos de la semana se reinician cada lunes. Todos arrancan de cero.</p>
     </div>
-  </div>
-</nav>
-
-<div class="app-layout">
-  <!-- ── SIDEBAR ── -->
-  <aside class="sidebar">
-    <div class="sidebar-section">
-      <div class="sidebar-label">Principal</div>
-      <a href="dashboard.html" class="sidebar-item" data-nav="dashboard.html">
-        <span class="icon">🏠</span> Inicio
-      </a>
+    <div class="seg" role="group" aria-label="Periodo del ranking" id="ranking-tabs">
+      <button type="button" class="tab-btn active" data-period="weekly" aria-pressed="true">Esta semana</button>
+      <button type="button" class="tab-btn" data-period="monthly" aria-pressed="false">Este mes</button>
+      <button type="button" class="tab-btn" data-period="all_time" aria-pressed="false">Global</button>
     </div>
-    <div class="sidebar-section">
-      <div class="sidebar-label">Materias</div>
-      <a href="ciencias-sociales.html" class="sidebar-item" data-nav="ciencias-sociales.html">
-        <span class="icon">🌍</span> Ciencias Sociales
-      </a>
-    </div>
-    <div class="sidebar-section">
-      <div class="sidebar-label">Práctica</div>
-      <a href="simulacros.html" class="sidebar-item" data-nav="simulacros.html">
-        <span class="icon">📝</span> Simulacros
-      </a>
-      <a href="estadisticas.html" class="sidebar-item" data-nav="estadisticas.html">
-        <span class="icon">📊</span> Estadísticas
-      </a>
-      <a href="ranking.html" class="sidebar-item active" data-nav="ranking.html">
-        <span class="icon">🏆</span> Ranking
-      </a>
-    </div>
-  </aside>
+  </header>
 
-  <!-- ── MAIN + RIGHT PANEL ── -->
-  <div class="ranking-layout">
+  <div class="grid-main-side side-360">
+    <div class="stack gap-24" style="min-width:0">
+      <section class="podium2" id="podium-container" aria-label="Los tres primeros"></section>
 
-    <!-- ── MAIN CONTENT ── -->
-    <main class="main-content" style="padding:0">
+      <section aria-label="Posiciones" class="stack gap-8">
+        <div class="clay lb2" id="lb-table-container"></div>
 
-      <!-- Page header -->
-      <div class="page-header" style="margin-bottom:24px">
-        <div>
-          <h2>🏆 Ranking Global</h2>
-          <p class="muted" style="margin-top:4px">Compite con otros estudiantes y sube posiciones</p>
+        <div id="lb-empty" style="display:none" class="empty clay">
+          <i data-icon="users" data-size="32"></i>
+          <strong style="color:var(--text)">Nadie en la tabla todavía</strong>
+          <span>Completa un simulacro y sé el primero de este periodo.</span>
         </div>
-      </div>
 
-      <!-- Period Tabs -->
-      <div class="ranking-tabs" id="ranking-tabs" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
-        <div style="display:flex;gap:8px;flex-wrap:wrap">
-          <button class="tab-btn active" data-period="all_time">Todo el tiempo</button>
-          <button class="tab-btn" data-period="weekly">Esta semana</button>
-          <button class="tab-btn" data-period="monthly">Este mes</button>
+        <div id="lb-error" style="display:none" class="empty clay">
+          <i data-icon="info" data-size="32"></i>
+          <strong style="color:var(--text)">No se pudo cargar el ranking</strong>
+          <button type="button" onclick="RankingPage.reload()" class="btn btn-secondary btn-sm">Reintentar</button>
         </div>
-        <span id="lb-refresh-label" style="font-size:0.72rem;color:rgba(245,245,240,0.35);font-weight:600;letter-spacing:0.04em"></span>
-      </div>
 
-      <!-- Podium (top 3) -->
-      <section class="podium-container" id="podium-container">
-        <!-- skeleton while loading -->
-        <div class="podium-slot position-2 skeleton-slot" id="podium-2">
-          <div class="podium-avatar skeleton"></div>
-          <div class="podium-name skeleton" style="width:70px;height:14px;border-radius:4px"></div>
-          <div class="podium-points skeleton" style="width:50px;height:11px;border-radius:4px;margin-top:4px"></div>
-          <div class="podium-stand"></div>
-        </div>
-        <div class="podium-slot position-1 skeleton-slot" id="podium-1">
-          <div class="podium-crown">👑</div>
-          <div class="podium-avatar skeleton"></div>
-          <div class="podium-name skeleton" style="width:80px;height:14px;border-radius:4px"></div>
-          <div class="podium-points skeleton" style="width:55px;height:11px;border-radius:4px;margin-top:4px"></div>
-          <div class="podium-stand"></div>
-        </div>
-        <div class="podium-slot position-3 skeleton-slot" id="podium-3">
-          <div class="podium-avatar skeleton"></div>
-          <div class="podium-name skeleton" style="width:65px;height:14px;border-radius:4px"></div>
-          <div class="podium-points skeleton" style="width:45px;height:11px;border-radius:4px;margin-top:4px"></div>
-          <div class="podium-stand"></div>
-        </div>
+        <span id="lb-refresh-label" class="t4" style="font-size:.75rem;font-weight:600;align-self:flex-end" aria-live="off"></span>
       </section>
+    </div>
 
-      <!-- Leaderboard Table (pos 4+) -->
-      <section>
-        <div class="flex justify-between items-center mb-md">
-          <h4 style="font-size:0.9rem;font-weight:800;text-transform:uppercase;letter-spacing:0.07em;color:rgba(245,245,240,0.5)">Posiciones</h4>
-          <span class="badge badge-outline" id="total-label" style="display:none"></span>
-        </div>
-
-        <div id="lb-table-container">
-          <!-- Skeleton rows -->
-          <div class="lb-table">
-            <div class="lb-header">
-              <span>#</span><span>Estudiante</span><span>Racha</span><span>Puntos</span>
-            </div>
-            <div class="lb-row skeleton-row"><div class="skeleton" style="height:44px;border-radius:var(--radius-md)"></div></div>
-            <div class="lb-row skeleton-row"><div class="skeleton" style="height:44px;border-radius:var(--radius-md)"></div></div>
-            <div class="lb-row skeleton-row"><div class="skeleton" style="height:44px;border-radius:var(--radius-md)"></div></div>
-            <div class="lb-row skeleton-row"><div class="skeleton" style="height:44px;border-radius:var(--radius-md)"></div></div>
-            <div class="lb-row skeleton-row"><div class="skeleton" style="height:44px;border-radius:var(--radius-md)"></div></div>
-          </div>
-        </div>
-
-        <!-- Empty state -->
-        <div id="lb-empty" style="display:none" class="empty-state">
-          <div style="font-size:3rem;margin-bottom:12px">🏜️</div>
-          <p style="font-weight:700;margin-bottom:8px">Nadie aquí todavía</p>
-          <p class="muted" style="font-size:0.85rem">¡Sé el primero en completar un simulacro!</p>
-        </div>
-
-        <!-- Error state -->
-        <div id="lb-error" style="display:none" class="empty-state">
-          <div style="font-size:2.5rem;margin-bottom:12px">⚠️</div>
-          <p style="font-weight:700;margin-bottom:8px">No se pudo cargar el ranking</p>
-          <button onclick="RankingPage.reload()" class="btn btn-outline btn-sm" style="margin-top:8px">Reintentar</button>
-        </div>
-      </section>
-
-    </main>
-
-    <!-- ── RIGHT PANEL — User Stats ── -->
-    <aside class="user-rank-panel" id="user-rank-panel">
-
-      <!-- User position card -->
-      <div class="rank-card" id="my-rank-card">
-        <div class="rank-card-header">
-          <div class="rank-avatar" id="rank-avatar">?</div>
-          <div>
-            <div class="rank-name" id="rank-name">Cargando…</div>
-            <div class="rank-label muted">Tu posición</div>
-          </div>
-          <div class="rank-badge" id="rank-badge">—</div>
-        </div>
-
-        <div class="rank-stats-grid">
-          <div class="rank-stat">
-            <div class="rank-stat-value accent" id="rs-points">—</div>
-            <div class="rank-stat-label">Puntos totales</div>
-          </div>
-          <div class="rank-stat">
-            <div class="rank-stat-value" style="color:var(--amber)" id="rs-streak">—</div>
-            <div class="rank-stat-label">Racha actual</div>
-          </div>
-          <div class="rank-stat">
-            <div class="rank-stat-value" style="color:var(--sky)" id="rs-sims">—</div>
-            <div class="rank-stat-label">Simulacros</div>
-          </div>
-          <div class="rank-stat">
-            <div class="rank-stat-value" style="color:var(--coral)" id="rs-avg">—</div>
-            <div class="rank-stat-label">Puntaje medio</div>
-          </div>
-        </div>
+    <aside class="feat me-card" id="user-rank-panel" aria-live="polite">
+      <span class="lbl acid">Tu posición</span>
+      <div class="inline" style="align-items:baseline;gap:10px;flex-wrap:wrap">
+        <span class="big-num" style="font-size:4rem;letter-spacing:-0.04em" id="rank-badge">—</span>
+        <span class="t3" style="font-size:.9375rem;font-weight:700" id="rank-total"></span>
       </div>
-
-      <!-- Streak widget -->
-      <div class="streak-panel">
-        <div class="flex items-center justify-between mb-sm">
-          <span style="font-size:0.75rem;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;color:var(--acid)">🔥 Racha de estudio</span>
-          <span class="streak-count" id="panel-streak-count">0</span>
-        </div>
-        <div id="streak-widget-container"></div>
+      <div class="me-stats">
+        <div class="pit me-stat"><strong id="rs-points">—</strong><small id="rs-points-lbl">Puntos esta semana</small></div>
+        <div class="pit me-stat"><strong id="rs-streak">—</strong><small>Racha actual</small></div>
       </div>
-
-      <!-- Shields -->
-      <div class="shields-panel" id="shields-panel" style="display:none">
-        <div class="shields-title">🛡️ Escudos de racha</div>
-        <div class="shields-info muted" id="shields-count">0 escudos disponibles</div>
-        <div class="shields-desc muted" style="font-size:0.78rem;margin-top:4px">Los escudos protegen tu racha si fallas un día.</div>
+      <div class="me-gap" id="rank-gap" hidden>
+        <i data-icon="up" data-size="22" data-stroke="2.6"></i>
+        <span id="rank-gap-txt"></span>
       </div>
-
-      <!-- CTA -->
-      <a href="simulacros.html" class="btn btn-primary" style="width:100%;text-align:center">
-        📝 Hacer simulacro
-      </a>
+      <a href="simulacros.html" class="btn btn-primary btn-block"><i data-icon="clip" data-size="18"></i><span>Hacer un simulacro</span></a>
+      <span class="t4" style="font-size:.8125rem;text-align:center">Cada simulacro suma puntos según tu puntaje.</span>
     </aside>
-
-  </div><!-- /.ranking-layout -->
-</div><!-- /.app-layout -->
+  </div>
+</main>
 
 <!-- Points toast container -->
 <div id="toast-container" class="toast-container"></div>
-
-<!-- Confetti container -->
 <div id="confetti-container" class="confetti-container" aria-hidden="true"></div>
 
-<!-- Mobile Nav -->
-<nav class="mobile-nav">
-  <a href="dashboard.html" class="mobile-nav-item">
-    <span class="icon">🏠</span>Inicio
-  </a>
-  <a href="ciencias-sociales.html" class="mobile-nav-item">
-    <span class="icon">🌍</span>Temas
-  </a>
-  <a href="simulacros.html" class="mobile-nav-item">
-    <span class="icon">📝</span>Simulacro
-  </a>
-  <a href="ranking.html" class="mobile-nav-item active">
-    <span class="icon">🏆</span>Ranking
-  </a>
-</nav>
-
-<script src="js/config.js?v=1.0.2"></script>
-<script src="js/api.js?v=1.0.2"></script>
-<script src="js/state.js?v=1.0.2"></script>
-<script src="js/ui.js?v=1.0.2"></script>
-<script src="js/streak-widget.js?v=1.0.2"></script>
-<script src="js/points-toast.js?v=1.0.2"></script>
-<script src="js/ranking.js?v=1.0.2"></script>
-<script src="js/app.js?v=1.0.2"></script>
+<script src="js/config.js?v=2.0.0"></script>
+<script src="js/api.js?v=2.0.0"></script>
+<script src="js/state.js?v=2.0.0"></script>
+<script src="js/ui.js?v=2.0.0"></script>
+<script src="js/shell.js?v=2.0.0"></script>
+<script src="js/points-toast.js?v=2.0.0"></script>
+<script src="js/ranking.js?v=2.0.0"></script>
+<script src="js/app.js?v=2.0.0"></script>
 <script>
-  // Actualiza el label "Actualizado hace Xs" cada segundo
+  // Actualiza el texto "Actualizado hace…" cada pocos segundos
   setInterval(() => {
     if (typeof RankingPage !== 'undefined') RankingPage._updateRefreshLabel();
-  }, 1000);
+  }, 5000);
 </script>
-
 </body>
 </html>

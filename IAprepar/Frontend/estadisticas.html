@@ -2,11 +2,12 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>PreparIA — Estadísticas</title>
   <meta name="robots" content="noindex, nofollow">
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎓</text></svg>">
   <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="css/clay.css?v=2.0.0">
   <style>
     .chart-card {
       background: var(--ink-soft);
@@ -63,233 +64,83 @@
     .topic-pct { width: 40px; text-align: right; font-size: 0.875rem; font-weight: 800; color: var(--acid); }
   </style>
 </head>
-<body>
+<body class="v2" data-racha-propia>
 
-<!-- ── NAVBAR ── -->
-<nav class="navbar">
-  <div class="container">
-    <a href="index.html" class="nav-logo">Prepar<span>IA</span></a>
-    <div class="flex items-center gap-md">
-      <span style="font-size: 0.875rem;color:rgba(245,245,240,0.5)">Hola, <strong data-user-name style="color:var(--white)">Estudiante</strong></span>
-      <button id="logout-btn" class="btn btn-outline btn-sm">Salir</button>
+<main class="page" id="main">
+  <header class="page-head">
+    <div class="page-head-txt">
+      <h1>Estadísticas</h1>
+      <p>Cómo vas y en qué enfocarte para subir tu puntaje.</p>
     </div>
+    <div class="page-head-actions">
+      <a href="simulacros.html" class="btn btn-secondary"><i data-icon="clip"></i><span>Nuevo simulacro</span></a>
+    </div>
+  </header>
+
+  <div class="kpis" style="--cols:4">
+    <div class="clay kpi"><span class="lbl">Simulacros hechos</span><span class="big-num" id="stats-total">—</span><small id="stats-total-sub">&nbsp;</small></div>
+    <div class="clay kpi"><span class="lbl">Puntaje promedio</span><span class="big-num" id="stats-promedio">—</span><small id="stats-promedio-sub">&nbsp;</small></div>
+    <div class="clay kpi"><span class="lbl">Mejor puntaje</span><span class="big-num" id="stats-mejor">—</span><small id="stats-mejor-sub">&nbsp;</small></div>
+    <div class="clay kpi"><span class="lbl">Racha más larga</span><span class="big-num" id="stats-racha">—</span><small id="stats-racha-sub">&nbsp;</small></div>
   </div>
-</nav>
 
-<div class="app-layout">
-  <!-- ── SIDEBAR ── -->
-  <aside class="sidebar">
-    <div class="sidebar-section">
-      <div class="sidebar-label">Principal</div>
-      <a href="dashboard.html" class="sidebar-item" data-nav="dashboard.html"><span class="icon">🏠</span> Inicio</a>
-    </div>
-    <div class="sidebar-section">
-      <div class="sidebar-label">Materias</div>
-      <a href="ciencias-sociales.html" class="sidebar-item" data-nav="ciencias-sociales.html"><span class="icon">🌍</span> Ciencias Sociales</a>
-    </div>
-    <div class="sidebar-section">
-      <div class="sidebar-label">Práctica</div>
-      <a href="simulacros.html" class="sidebar-item" data-nav="simulacros.html"><span class="icon">📝</span> Simulacros</a>
-      <a href="estadisticas.html" class="sidebar-item active" data-nav="estadisticas.html"><span class="icon">📊</span> Estadísticas</a>
-      <a href="ranking.html" class="sidebar-item" data-nav="ranking.html"><span class="icon">🏆</span> Ranking</a>
-    </div>
-  </aside>
-
-  <!-- ── MAIN CONTENT ── -->
-  <main class="main-content">
-    <div class="page-header">
-      <div class="breadcrumb">Inicio → <span>Estadísticas</span></div>
-      <div class="flex justify-between items-center" style="flex-wrap:wrap;gap:16px">
-        <div>
-          <h2>📊 Mis estadísticas</h2>
-          <p>Analiza tu progreso y descubre dónde mejorar.</p>
+  <div class="grid-main-side">
+    <div class="stack gap-24" style="min-width:0">
+      <section class="clay stack gap-16" aria-labelledby="ch-t" style="padding:24px 28px 20px">
+        <div class="between" style="flex-wrap:wrap">
+          <h2 id="ch-t">Puntaje en tus últimos simulacros</h2>
+          <span class="inline t3" style="font-size:.8125rem;font-weight:600;gap:8px" id="chart-hint"><span style="width:22px;border-top:2px dashed rgba(245,245,240,.5)"></span>Meta recomendada: 70%</span>
         </div>
-        <button onclick="if(confirm('¿Borrar todo el historial de simulacros?')){localStorage.removeItem('preparia_simulacros');location.reload()}"
-          class="btn btn-sm" style="background:rgba(255,107,107,0.1);color:var(--coral);border-color:var(--coral)">
-          🗑️ Borrar historial
-        </button>
-      </div>
-    </div>
-
-    <!-- Summary stats -->
-    <div class="grid-4 mb-lg">
-      <div class="stat-card green">
-        <div class="stat-label">Simulacros realizados</div>
-        <div class="stat-value accent" id="stats-total">0</div>
-        <div class="stat-badge up">📝 Total</div>
-      </div>
-      <div class="stat-card coral">
-        <div class="stat-label">Puntaje promedio</div>
-        <div class="stat-value" style="color:var(--coral)" id="stats-promedio">—</div>
-        <div class="stat-badge" style="background:rgba(255,107,107,0.1);color:var(--coral)">📈 Acum.</div>
-      </div>
-      <div class="stat-card sky">
-        <div class="stat-label">Mejor puntaje</div>
-        <div class="stat-value" style="color:var(--sky)" id="stats-mejor">—</div>
-        <div class="stat-badge" style="background:rgba(78,205,196,0.1);color:var(--sky)">🏆 Récord</div>
-      </div>
-      <div class="stat-card amber">
-        <div class="stat-label">Racha más larga</div>
-        <div class="stat-value" style="color:var(--amber)" id="stats-racha">0</div>
-        <div class="stat-badge" style="background:rgba(255,217,61,0.1);color:var(--amber)">🔥 días</div>
-      </div>
-    </div>
-
-    <!-- Charts row -->
-    <div class="grid-2 mb-lg">
-      <!-- Bar chart -->
-      <div class="chart-card">
-        <div class="chart-title">📈 Evolución de puntajes</div>
-        <div id="chart-empty" class="empty-state" style="padding:30px 0">
-          <div class="big">📊</div>
-          <p>Completa simulacros para ver tu evolución</p>
-        </div>
-        <div id="chart-wrapper" style="display:none">
-          <canvas id="chart-scores" style="height:200px;width:100%"></canvas>
-        </div>
-      </div>
-
-      <!-- Score ring + info -->
-      <div class="chart-card">
-        <div class="chart-title">🎯 Puntaje promedio global</div>
-        <div class="flex items-center gap-xl">
-          <div id="avg-score-ring"></div>
-          <div class="flex flex-col gap-md" style="flex:1">
-            <div>
-              <div class="muted" style="font-size: 0.875rem">Nivel actual</div>
-              <div style="font-weight:700" id="level-label">—</div>
-            </div>
-            <div>
-              <div class="muted" style="font-size: 0.875rem">Meta recomendada</div>
-              <div style="font-weight:700;color:var(--acid)">70% o más</div>
-            </div>
-            <div>
-              <div class="muted" style="font-size: 0.875rem">¿Qué mejorar?</div>
-              <div style="font-weight:600;font-size:0.88rem" id="improve-tip">Completa más simulacros</div>
-            </div>
+        <div id="chart-scores">
+          <div class="empty">
+            <i data-icon="chart" data-size="32"></i>
+            <span>Completa simulacros para ver tu evolución.</span>
           </div>
         </div>
-        <!-- Mini progress by topic -->
-        <div class="divider"></div>
-        <div class="chart-title">Rendimiento por tema</div>
-        <div id="topic-bars">
-          <div class="topic-bar"><div class="topic-name">Historia Col.</div><div class="topic-track"><div class="topic-fill" style="width:72%"></div></div><div class="topic-pct">72%</div></div>
-          <div class="topic-bar"><div class="topic-name">Geografía</div><div class="topic-track"><div class="topic-fill" style="width:58%;background:var(--sky)"></div></div><div class="topic-pct" style="color:var(--sky)">58%</div></div>
-          <div class="topic-bar"><div class="topic-name">Política</div><div class="topic-track"><div class="topic-fill" style="width:45%;background:var(--amber)"></div></div><div class="topic-pct" style="color:var(--amber)">45%</div></div>
-          <div class="topic-bar"><div class="topic-name">Economía</div><div class="topic-track"><div class="topic-fill" style="width:38%;background:var(--coral)"></div></div><div class="topic-pct" style="color:var(--coral)">38%</div></div>
+      </section>
+
+      <section class="clay stack gap-4" aria-labelledby="h-t" style="padding:20px 16px 12px">
+        <div class="between" style="padding:0 12px 6px">
+          <h2 id="h-t">Historial</h2>
         </div>
-      </div>
-    </div>
-
-    <!-- Activity heatmap -->
-    <div class="chart-card mb-lg">
-      <div class="chart-title">🗓️ Actividad — últimas 4 semanas</div>
-      <div class="flex items-center gap-md mb-md" style="font-size: 0.875rem;color:rgba(245,245,240,0.4)">
-        <span>Menos</span>
-        <div style="display:flex;gap:4px">
-          <div style="width:14px;height:14px;border-radius:3px;background:rgba(245,245,240,0.07)"></div>
-          <div style="width:14px;height:14px;border-radius:3px;background:rgba(191,255,0,0.2)"></div>
-          <div style="width:14px;height:14px;border-radius:3px;background:rgba(191,255,0,0.45)"></div>
-          <div style="width:14px;height:14px;border-radius:3px;background:var(--acid)"></div>
+        <div style="overflow-x:auto">
+          <table class="tbl">
+            <thead>
+              <tr><th scope="col">Fecha</th><th scope="col">Correctas</th><th scope="col">Puntaje</th><th scope="col">Tiempo</th></tr>
+            </thead>
+            <tbody id="stats-tbody">
+              <tr><td colspan="4"><div class="skel" style="height:20px"></div></td></tr>
+            </tbody>
+          </table>
         </div>
-        <span>Más actividad</span>
-      </div>
-      <div class="heatmap" id="heatmap" style="max-width:340px"></div>
+      </section>
     </div>
 
-    <!-- History table -->
-    <div class="chart-card">
-      <div class="flex justify-between items-center mb-md">
-        <div class="chart-title" style="margin-bottom:0">📋 Historial de simulacros</div>
-        <a href="simulacros.html" class="btn btn-primary btn-sm">+ Nuevo simulacro</a>
-      </div>
-      <div class="table-wrapper">
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>#</th>
-              <th>Fecha</th>
-              <th>Resultado</th>
-              <th>Puntaje</th>
-              <th>Nivel</th>
-            </tr>
-          </thead>
-          <tbody id="stats-tbody">
-            <tr>
-              <td colspan="5" style="text-align:center;color:rgba(245,245,240,0.3);padding:40px">
-                Aún no hay simulacros registrados. <a href="simulacros.html" style="color:var(--acid)">¡Empieza ahora!</a>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+    <div class="stack gap-24">
+      <section class="feat stack gap-16" id="foco" aria-labelledby="foco-t" style="padding:26px 28px">
+        <span class="lbl acid" id="foco-t">Dónde enfocarte</span>
+        <div class="skel" style="height:60px"></div>
+      </section>
+
+      <section class="clay stack gap-8" aria-labelledby="ru-t" style="padding:24px 16px 12px">
+        <h2 id="ru-t" style="padding:0 12px 6px">Rendimiento por unidad</h2>
+        <div id="topic-bars" class="stack gap-4">
+          <div class="skel" style="height:56px;margin:0 12px"></div>
+          <div class="skel" style="height:56px;margin:0 12px"></div>
+        </div>
+      </section>
     </div>
+  </div>
+</main>
 
-  </main>
-</div>
-
-<!-- Mobile Nav -->
-<nav class="mobile-nav">
-  <a href="dashboard.html" class="mobile-nav-item"><span class="icon">🏠</span>Inicio</a>
-  <a href="ciencias-sociales.html" class="mobile-nav-item"><span class="icon">🌍</span>Temas</a>
-  <a href="simulacros.html" class="mobile-nav-item"><span class="icon">📝</span>Simulacro</a>
-  <a href="ranking.html" class="mobile-nav-item"><span class="icon">🏆</span>Ranking</a>
-</nav>
-
-<script src="js/config.js?v=1.0.2"></script>
-<script src="js/api.js?v=1.0.2"></script>
-<script src="js/state.js?v=1.0.2"></script>
-<script src="js/ui.js?v=1.0.2"></script>
-<script src="js/pages/page-estadisticas.js?v=1.0.2"></script>
-<script src="js/app.js?v=1.0.2"></script>
-<script>
-document.addEventListener('DOMContentLoaded', () => {
-  const history = Simulacros.getHistory();
-  const stats   = Simulacros.getStats();
-
-  // Show chart if data
-  if (history.length) {
-    document.getElementById('chart-empty').style.display = 'none';
-    document.getElementById('chart-wrapper').style.display = 'block';
-  }
-
-  // Level label
-  const levelEl = document.getElementById('level-label');
-  const tipEl   = document.getElementById('improve-tip');
-  if (levelEl) {
-    levelEl.textContent = Utils.scoreLabel(stats.avg);
-    levelEl.style.color = Utils.scoreColor(stats.avg);
-  }
-  if (tipEl && history.length) {
-    const tips = [
-      'Repasa Historia de Colombia',
-      'Practica preguntas de Geografía',
-      'Estudia la Constitución de 1991',
-      'Refuerza conceptos económicos',
-    ];
-    tipEl.textContent = tips[Math.floor(Math.random() * tips.length)];
-  }
-
-  // Heatmap
-  const heatmap = document.getElementById('heatmap');
-  if (heatmap) {
-    const streak = Streak.get();
-    const histDates = history.map(h => h.date);
-    for (let i = 27; i >= 0; i--) {
-      const d = new Date();
-      d.setDate(d.getDate() - i);
-      const str = d.toISOString().split('T')[0];
-      const inHistory = (streak.history || []).includes(str);
-      const simCount  = history.filter(h => h.date.includes(d.getDate())).length;
-      let level = 0;
-      if (inHistory) level = simCount >= 2 ? 3 : simCount === 1 ? 2 : 1;
-      const cell = document.createElement('div');
-      cell.className = `heat-cell level-${level}`;
-      cell.title = `${str}: ${inHistory ? 'Activo' : 'Inactivo'}`;
-      heatmap.appendChild(cell);
-    }
-  }
-});
-</script>
+<script src="js/config.js?v=2.0.0"></script>
+<script src="js/api.js?v=2.0.0"></script>
+<script src="js/state.js?v=2.0.0"></script>
+<script src="js/ui.js?v=2.0.0"></script>
+<script src="js/shell.js?v=2.0.0"></script>
+<script src="js/progreso-ruta.js?v=2.0.0"></script>
+<script src="js/ruta.js?v=2.0.0"></script>
+<script src="js/pages/page-estadisticas.js?v=2.0.0"></script>
+<script src="js/app.js?v=2.0.0"></script>
 </body>
 </html>

@@ -233,6 +233,12 @@ const Utils = {
 
   navigate: (url) => { window.location.href = url; },
 
+  /** "20 de sept de 2026" → "20 sept". Para columnas y ejes estrechos. */
+  fechaCorta: (f) => {
+    const p = String(f || '').split(' ');
+    return p.length >= 3 && p[1] === 'de' ? `${p[0]} ${p[2].replace('.', '')}` : String(f || '');
+  },
+
   formatTime: (seconds) => {
     const m = Math.floor(seconds / 60).toString().padStart(2, '0');
     const s = (seconds % 60).toString().padStart(2, '0');

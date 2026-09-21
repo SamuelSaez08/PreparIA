@@ -9,6 +9,7 @@
   <link rel="icon" type="image/svg+xml"
     href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎓</text></svg>">
   <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="css/clay.css?v=2.0.0">
   <style>
     /* ── Node Content Page ── */
     .node-page-hero {
@@ -304,51 +305,17 @@
   </style>
 </head>
 
-<body>
+<body class="v2">
 
-  <!-- ── NAVBAR ── -->
-  <nav class="navbar">
-    <div class="container">
-      <a href="index.html" class="nav-logo">Prepar<span>IA</span></a>
-      <div class="flex items-center gap-md">
-        <span style="font-size:0.85rem;color:rgba(245,245,240,0.5)">Hola, <strong data-user-name
-            style="color:var(--white)">Estudiante</strong></span>
-        <button id="logout-btn" class="btn btn-outline btn-sm">Salir</button>
-      </div>
-    </div>
-  </nav>
 
-  <div class="app-layout">
-    <!-- ── SIDEBAR ── -->
-    <aside class="sidebar">
-      <div class="sidebar-section">
-        <div class="sidebar-label">Principal</div>
-        <a href="dashboard.html" class="sidebar-item" data-nav="dashboard.html">
-          <span class="icon">🏠</span> Inicio
-        </a>
-      </div>
-      <div class="sidebar-section">
-        <div class="sidebar-label">Materias</div>
-        <a href="ciencias-sociales.html" class="sidebar-item active" data-nav="ciencias-sociales.html">
-          <span class="icon">🌍</span> Ciencias Sociales
-        </a>
-      </div>
-      <div class="sidebar-section">
-        <div class="sidebar-label">Práctica</div>
-        <a href="simulacros.html" class="sidebar-item" data-nav="simulacros.html">
-          <span class="icon">📝</span> Simulacros
-        </a>
-        <a href="estadisticas.html" class="sidebar-item" data-nav="estadisticas.html">
-          <span class="icon">📊</span> Estadísticas
-        </a>
-      </div>
-    </aside>
+  <div class="v2-wrap">
+
 
     <!-- ── MAIN CONTENT ── -->
-    <main class="main-content">
+    <main class="page" id="main">
       <!-- Back Button -->
       <a href="ciencias-sociales.html" class="back-btn" id="back-btn">
-        <span class="arrow">←</span> Volver al árbol
+        <span class="arrow">←</span> Volver a Ciencias Sociales
       </a>
 
       <!-- Node Hero Area -->
@@ -392,18 +359,12 @@
     </main>
   </div>
 
-  <!-- Mobile Nav -->
-  <nav class="mobile-nav">
-    <a href="dashboard.html" class="mobile-nav-item"><span class="icon">🏠</span>Inicio</a>
-    <a href="ciencias-sociales.html" class="mobile-nav-item active"><span class="icon">🌍</span>Temas</a>
-    <a href="simulacros.html" class="mobile-nav-item"><span class="icon">📝</span>Simulacro</a>
-    <a href="estadisticas.html" class="mobile-nav-item"><span class="icon">📊</span>Stats</a>
-  </nav>
 
   <script src="js/config.js?v=1.0.2"></script>
   <script src="js/api.js?v=1.0.2"></script>
   <script src="js/state.js?v=1.0.2"></script>
-  <script src="js/ui.js?v=1.0.2"></script>
+  <script src="js/ui.js?v=2.0.0"></script>
+  <script src="js/shell.js?v=2.0.0"></script>
   <script src="js/pages/page-nodo.js?v=1.0.2"></script>
   <script src="js/app.js?v=1.0.2"></script>
 </body>

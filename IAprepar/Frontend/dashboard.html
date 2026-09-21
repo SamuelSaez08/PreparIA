@@ -2,294 +2,103 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>PreparIA — Inicio</title>
   <meta name="robots" content="noindex, nofollow">
+  <meta name="theme-color" content="#0A0A1A">
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎓</text></svg>">
   <link rel="stylesheet" href="css/styles.css?v=2">
-  <style>
-    .subject-card {
-      display: flex; flex-direction: column;
-      background: var(--ink-soft);
-      border: 2px solid rgba(245,245,240,0.1);
-      border-radius: var(--radius-xl);
-      padding: 24px;
-      transition: all var(--transition);
-      text-decoration: none;
-      color: var(--white);
-    }
-    .subject-card:hover {
-      border-color: var(--acid);
-      transform: translateY(-3px);
-      box-shadow: var(--shadow-solid), var(--shadow-clay);
-    }
-    .subject-icon {
-      font-size: 2rem; margin-bottom: 12px;
-      width: 52px; height: 52px;
-      background: var(--acid-glow);
-      border: 2px solid var(--acid);
-      border-radius: var(--radius-md);
-      display: flex; align-items: center; justify-content: center;
-      box-shadow: var(--shadow-solid-sm);
-    }
-    .quick-action {
-      display: flex; align-items: center; gap: 14px;
-      padding: 16px 20px;
-      background: var(--ink-soft);
-      border: 2px solid rgba(245,245,240,0.1);
-      border-radius: var(--radius-md);
-      text-decoration: none; color: var(--white);
-      transition: all var(--transition);
-      font-weight: 600; font-size: 0.92rem;
-    }
-    .quick-action:hover {
-      border-color: var(--acid);
-      background: var(--acid-glow);
-      transform: translateX(4px);
-    }
-    .quick-action .qa-icon {
-      width: 36px; height: 36px; border-radius: var(--radius-sm);
-      background: var(--ink-muted);
-      display: flex; align-items: center; justify-content: center;
-      font-size: 1.1rem; flex-shrink: 0;
-    }
-    .user-greeting {
-      display: flex; align-items: center; gap: 16px;
-    }
-    .user-avatar {
-      width: 52px; height: 52px; border-radius: 50%;
-      background: var(--acid);
-      display: flex; align-items: center; justify-content: center;
-      font-size: 1.3rem; font-weight: 800; color: var(--ink);
-      border: 3px solid var(--ink-muted);
-      flex-shrink: 0;
-    }
-  </style>
+  <link rel="stylesheet" href="css/clay.css?v=2.0.0">
 </head>
-<body>
+<body class="v2" data-racha-propia>
 
-<!-- ── NAVBAR ── -->
-<nav class="navbar">
-  <div class="container">
-    <a href="index.html" class="nav-logo">Prepar<span>IA</span></a>
-    <div class="flex items-center gap-md">
-      <span style="font-size: 0.875rem;color:rgba(245,245,240,0.5)">Hola, <strong data-user-name style="color:var(--white)">Estudiante</strong></span>
-      <button id="logout-btn" class="btn btn-outline btn-sm">Salir</button>
+<main class="page" id="main">
+
+  <header class="page-head">
+    <div class="page-head-txt">
+      <h1>Hola, <span data-user-name>Estudiante</span></h1>
+      <p id="greeting-sub">Preparando tu resumen…</p>
     </div>
+    <div class="page-head-actions">
+      <a href="simulacros.html" class="btn btn-secondary"><i data-icon="clip"></i><span>Hacer simulacro</span></a>
+    </div>
+  </header>
+
+  <div class="grid-2-1">
+    <!-- La única tarjeta destacada: el siguiente paso -->
+    <section class="feat card-pad stack gap-20" id="continuar" aria-labelledby="cont-t" style="padding:30px 32px">
+      <div class="between">
+        <span class="lbl acid" id="cont-t">Continúa tu ruta</span>
+      </div>
+      <div class="stack gap-12">
+        <div class="skel" style="height:80px"></div>
+        <div class="skel" style="height:12px;width:70%"></div>
+      </div>
+    </section>
+
+    <section class="clay card-pad stack gap-16" aria-labelledby="racha-t">
+      <div class="between">
+        <span class="lbl" id="racha-t">Racha de estudio</span>
+        <span style="color:var(--amber);display:flex"><i data-icon="flame" data-size="22"></i></span>
+      </div>
+      <div class="inline" style="align-items:baseline;gap:10px">
+        <span class="big-num" style="font-size:3.5rem;letter-spacing:-0.04em" id="streak-count">0</span>
+        <span class="t3" style="font-size:1.0625rem;font-weight:700" id="streak-unit">días seguidos</span>
+      </div>
+      <div class="week" id="streak-days" aria-label="Actividad de los últimos 7 días"></div>
+      <p class="t3" style="font-size:.875rem;line-height:1.5" id="streak-msg"></p>
+    </section>
   </div>
-</nav>
 
-<div class="app-layout">
-  <!-- ── SIDEBAR ── -->
-  <aside class="sidebar">
-    <div class="sidebar-section">
-      <div class="sidebar-label">Principal</div>
-      <a href="dashboard.html" class="sidebar-item active" data-nav="dashboard.html">
-        <span class="icon">🏠</span> Inicio
-      </a>
+  <div class="kpis" style="--cols:3">
+    <div class="clay kpi">
+      <span class="lbl">Simulacros hechos</span>
+      <span class="big-num" id="stat-simulacros">—</span>
+      <small id="stat-simulacros-sub">&nbsp;</small>
     </div>
-    <div class="sidebar-section">
-      <div class="sidebar-label">Materias</div>
-      <a href="ciencias-sociales.html" class="sidebar-item" data-nav="ciencias-sociales.html">
-        <span class="icon">🌍</span> Ciencias Sociales
-      </a>
+    <div class="clay kpi">
+      <span class="lbl">Puntaje promedio</span>
+      <span class="big-num" id="stat-promedio">—</span>
+      <small id="stat-promedio-sub">Meta recomendada: 70%</small>
     </div>
-    <div class="sidebar-section">
-      <div class="sidebar-label">Práctica</div>
-      <a href="simulacros.html" class="sidebar-item" data-nav="simulacros.html">
-        <span class="icon">📝</span> Simulacros
-      </a>
-      <a href="estadisticas.html" class="sidebar-item" data-nav="estadisticas.html">
-        <span class="icon">📊</span> Estadísticas
-      </a>
-      <a href="ranking.html" class="sidebar-item" data-nav="ranking.html">
-        <span class="icon">🏆</span> Ranking
-      </a>
-    </div>
-    <!-- Solo visible para cuentas con rol de administrador -->
-    <div class="sidebar-section" data-admin-only hidden>
-      <div class="sidebar-label">Administración</div>
-      <a href="admin.html" class="sidebar-item" data-nav="admin.html">
-        <span class="icon">🛠️</span> Panel de administración
-      </a>
-    </div>
-  </aside>
+    <a href="ranking.html" class="clay kpi lift">
+      <span class="between"><span class="lbl">Tu posición</span><span class="chev" style="color:var(--text-5)"><i data-icon="chev" data-size="18"></i></span></span>
+      <span class="big-num" id="stat-rank">—</span>
+      <small id="stat-rank-sub">en el ranking de la semana</small>
+    </a>
+  </div>
 
-  <!-- ── MAIN CONTENT ── -->
-  <main class="main-content">
-    <!-- Greeting -->
-    <div class="page-header">
-      <div class="user-greeting">
-        <div class="user-avatar" id="user-avatar">S</div>
-        <div>
-          <h2>¡Buenas, <span data-user-name>Estudiante</span>! 👋</h2>
-          <p class="muted" id="greeting-sub">Listo para seguir estudiando hoy</p>
-        </div>
+  <div class="grid-3-2">
+    <section class="clay stack gap-4" aria-labelledby="unid-t" style="padding:24px 16px 12px">
+      <div class="between" style="padding:0 12px 8px">
+        <h2 id="unid-t">Progreso por unidad</h2>
+        <span class="t4" style="font-size:.8125rem;font-weight:600">Ciencias Sociales</span>
       </div>
-    </div>
-
-    <!-- Stat Cards Row -->
-    <div class="grid-4 mb-lg">
-      <div class="stat-card green">
-        <div class="stat-label">Simulacros realizados</div>
-        <div class="stat-value accent" id="stat-simulacros">0</div>
-        <div class="stat-badge up">📝 Total</div>
+      <div id="unidades" class="stack gap-4">
+        <div class="skel" style="height:56px;margin:0 12px"></div>
+        <div class="skel" style="height:56px;margin:0 12px"></div>
+        <div class="skel" style="height:56px;margin:0 12px"></div>
       </div>
-      <div class="stat-card coral">
-        <div class="stat-label">Puntaje promedio</div>
-        <div class="stat-value" style="color:var(--coral)" id="stat-promedio">—</div>
-        <div class="stat-badge" style="background:rgba(255,107,107,0.1);color:var(--coral)">📈 Acumulado</div>
+    </section>
+
+    <section class="clay card-pad stack gap-16" aria-labelledby="ult-t" id="ultimo">
+      <h2 id="ult-t">Último simulacro</h2>
+      <div id="recent-simulacros" class="stack gap-16" style="flex-grow:1">
+        <div class="skel" style="height:44px;width:60%"></div>
       </div>
-      <div class="stat-card sky">
-        <div class="stat-label">Mejor puntaje</div>
-        <div class="stat-value" style="color:var(--sky)" id="stat-mejor">—</div>
-        <div class="stat-badge" style="background:rgba(78,205,196,0.1);color:var(--sky)">🏆 Récord</div>
-      </div>
-      <div class="stat-card amber">
-        <div class="stat-label">Racha actual</div>
-        <div class="stat-value" style="color:var(--amber)" id="stat-racha">0</div>
-        <div class="stat-badge" style="background:rgba(255,217,61,0.1);color:var(--amber)">🔥 días</div>
-      </div>
-    </div>
+    </section>
+  </div>
 
-    <!-- Two Column -->
-    <div class="grid-2 mb-lg">
+</main>
 
-      <!-- Streak widget -->
-      <div class="streak-widget">
-        <div class="flex items-center justify-between mb-md">
-          <div>
-            <div style="font-size: 0.875rem;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;color:var(--acid);margin-bottom:4px">🔥 Racha de estudio</div>
-            <h3>Días consecutivos</h3>
-          </div>
-          <div class="streak-count" id="streak-count">0</div>
-        </div>
-        <div class="streak-days" id="streak-days"></div>
-        <p class="muted mt-md" style="font-size:0.8rem">¡Estudia hoy para mantener tu racha activa!</p>
-      </div>
-
-      <!-- Quick actions -->
-      <div class="card no-hover">
-        <h4 class="mb-md">⚡ Acciones rápidas</h4>
-        <div class="flex flex-col gap-sm">
-          <a href="simulacros.html" class="quick-action">
-            <div class="qa-icon">📝</div>
-            <div>
-              <div>Nuevo simulacro</div>
-              <div class="muted" style="font-size: 0.875rem;font-weight:500">10 preguntas · 20 min</div>
-            </div>
-            <span style="margin-left:auto;color:var(--acid)">→</span>
-          </a>
-          <a href="ciencias-sociales.html" class="quick-action">
-            <div class="qa-icon">🌍</div>
-            <div>
-              <div>Repasar temas</div>
-              <div class="muted" style="font-size: 0.875rem;font-weight:500">Árbol interactivo</div>
-            </div>
-            <span style="margin-left:auto;color:var(--acid)">→</span>
-          </a>
-          <a href="estadisticas.html" class="quick-action">
-            <div class="qa-icon">📊</div>
-            <div>
-              <div>Ver estadísticas</div>
-              <div class="muted" style="font-size: 0.875rem;font-weight:500">Historial y gráficos</div>
-            </div>
-            <span style="margin-left:auto;color:var(--acid)">→</span>
-          </a>
-        </div>
-      </div>
-    </div>
-
-    <!-- Progress Section -->
-    <div class="card no-hover mb-lg">
-      <div class="flex justify-between items-center mb-md">
-        <h4>📈 Progreso por área</h4>
-        <span class="badge badge-outline">Ciencias Sociales</span>
-      </div>
-      <div class="flex flex-col gap-md">
-        <div>
-          <div class="flex justify-between mb-sm">
-            <span style="font-size:0.88rem;font-weight:600">Historia de Colombia</span>
-            <span style="font-size:0.88rem;font-weight:700;color:var(--acid)">72%</span>
-          </div>
-          <div class="progress-bar"><div class="progress-fill" data-pct="72" style="width:0%"></div></div>
-        </div>
-        <div>
-          <div class="flex justify-between mb-sm">
-            <span style="font-size:0.88rem;font-weight:600">Geografía</span>
-            <span style="font-size:0.88rem;font-weight:700;color:var(--sky)">58%</span>
-          </div>
-          <div class="progress-bar"><div class="progress-fill sky" data-pct="58" style="width:0%"></div></div>
-        </div>
-        <div>
-          <div class="flex justify-between mb-sm">
-            <span style="font-size:0.88rem;font-weight:600">Ciencias Políticas</span>
-            <span style="font-size:0.88rem;font-weight:700;color:var(--amber)">45%</span>
-          </div>
-          <div class="progress-bar"><div class="progress-fill amber" data-pct="45" style="width:0%"></div></div>
-        </div>
-        <div>
-          <div class="flex justify-between mb-sm">
-            <span style="font-size:0.88rem;font-weight:600">Economía</span>
-            <span style="font-size:0.88rem;font-weight:700;color:var(--coral)">38%</span>
-          </div>
-          <div class="progress-bar"><div class="progress-fill coral" data-pct="38" style="width:0%"></div></div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Recent Simulacros -->
-    <div class="card no-hover">
-      <div class="flex justify-between items-center mb-md">
-        <h4>🕐 Simulacros recientes</h4>
-        <a href="simulacros.html" class="btn btn-ghost btn-sm">Ver todos →</a>
-      </div>
-      <div id="recent-simulacros"></div>
-    </div>
-
-  </main>
-</div>
-
-<!-- Mobile Nav -->
-<nav class="mobile-nav">
-  <a href="dashboard.html" class="mobile-nav-item active">
-    <span class="icon">🏠</span>Inicio
-  </a>
-  <a href="ciencias-sociales.html" class="mobile-nav-item">
-    <span class="icon">🌍</span>Temas
-  </a>
-  <a href="simulacros.html" class="mobile-nav-item">
-    <span class="icon">📝</span>Simulacro
-  </a>
-  <a href="ranking.html" class="mobile-nav-item">
-    <span class="icon">🏆</span>Ranking
-  </a>
-</nav>
-
-<script src="js/config.js?v=1.0.2"></script>
-<script src="js/api.js?v=1.0.2"></script>
-<script src="js/state.js?v=1.0.2"></script>
-<script src="js/ui.js?v=1.0.2"></script>
-<script src="js/streak-widget.js?v=1.0.2"></script>
-<script src="js/pages/page-dashboard.js?v=1.0.2"></script>
-<script src="js/app.js?v=1.0.2"></script>
-<script>
-  // Extra dashboard init
-  document.addEventListener('DOMContentLoaded', () => {
-    // Avatar initial
-    const user = Auth.getUser();
-    if (user) {
-      const av = document.getElementById('user-avatar');
-      if (av) av.textContent = (user.nombre || user.email)[0].toUpperCase();
-    }
-
-    // Greeting sub
-    const hour = new Date().getHours();
-    const greetings = ['¡Buenas noches!', '¡Buenos días!', '¡Buenas tardes!'];
-    const g = hour < 12 ? greetings[1] : hour < 19 ? greetings[2] : greetings[0];
-    const sub = document.getElementById('greeting-sub');
-    if (sub) sub.textContent = g + ' Listo para seguir estudiando.';
-  });
-</script>
+<script src="js/config.js?v=2.0.0"></script>
+<script src="js/api.js?v=2.0.0"></script>
+<script src="js/state.js?v=2.0.0"></script>
+<script src="js/ui.js?v=2.0.0"></script>
+<script src="js/shell.js?v=2.0.0"></script>
+<script src="js/progreso-ruta.js?v=2.0.0"></script>
+<script src="js/ruta.js?v=2.0.0"></script>
+<script src="js/pages/page-dashboard.js?v=2.0.0"></script>
+<script src="js/app.js?v=2.0.0"></script>
 </body>
 </html>

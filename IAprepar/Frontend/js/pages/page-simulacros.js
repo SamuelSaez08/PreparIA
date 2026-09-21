@@ -223,20 +223,26 @@ const PageSimulacros = {
         <div class="question-number">Pregunta ${s.current + 1} · ${Utils.sanitizeHTML(q.tema)}</div>
         ${q.texto_base ? `<div class="question-context">${Utils.sanitizeHTML(q.texto_base)}</div>` : ''}
         <div class="question-text">${Utils.sanitizeHTML(q.text)}</div>
-        <div class="options-list" id="options-list">
+        <div class="options-list" id="options-list" role="radiogroup" aria-label="Opciones de respuesta">
           ${q.options.map((opt, i) => `
-            <div class="option-item ${s.answers[q.id] === i ? 'selected' : ''}"
+            <button type="button" role="radio" aria-checked="${s.answers[q.id] === i}"
+                 class="option-item ${s.answers[q.id] === i ? 'selected' : ''}"
                  data-index="${i}" onclick="PageSimulacros.selectAnswer(${i})">
-              <div class="option-letter">${String.fromCharCode(65 + i)}</div>
-              <div>${Utils.sanitizeHTML(typeof opt === 'string' ? opt : opt.text)}</div>
-            </div>
+              <span class="option-letter">${String.fromCharCode(65 + i)}</span>
+              <span style="text-align:left">${Utils.sanitizeHTML(typeof opt === 'string' ? opt : opt.text)}</span>
+            </button>
           `).join('')}
         </div>
       </div>
     `;
 
     document.getElementById('btn-prev').disabled = s.current === 0;
-    document.getElementById('btn-next').textContent = s.current === total - 1 ? 'Finalizar 🏁' : 'Siguiente →';
+    const ultima = s.current === total - 1;
+    const icono = (n) => (typeof Icon !== 'undefined' ? Icon.svg(n, 18) : '');
+    document.getElementById('btn-next').innerHTML = ultima
+      ? `${icono('check')}<span>Entregar simulacro</span>`
+      : `<span>Siguiente</span>${icono('arrow')}`;
+    window.scrollTo({ top: 0, behavior: 'auto' });
   },
 
   selectAnswer(index) {
@@ -244,8 +250,9 @@ const PageSimulacros = {
     const q = s.questions[s.current];
     s.answers[q.id] = index;
 
-    document.querySelectorAll('.option-item').forEach((el, i) => {
+    document.querySelectorAll('#options-list .option-item').forEach((el, i) => {
       el.classList.toggle('selected', i === index);
+      el.setAttribute('aria-checked', String(i === index));
     });
 
     if (!s.intentoId) return;
@@ -714,17 +721,17 @@ const PageSimulacros = {
     if (!container) return;
     const history = Simulacros.getHistory();
     if (!history.length) {
-      container.innerHTML = '<p style="color:rgba(245,245,240,0.3);text-align:center;padding:20px 0">Aún no hay simulacros registrados.</p>';
+      container.innerHTML = `<div class="empty">${typeof Icon !== 'undefined' ? Icon.svg('clip', 28) : ''}<span>Aún no tienes intentos. El primero toma 20 minutos.</span></div>`;
       return;
     }
-    container.innerHTML = history.slice(0, 5).map(h => `
-      <div class="flex items-center justify-between" style="padding:12px 0;border-bottom:1px solid rgba(245,245,240,0.07)">
-        <div>
-          <div style="font-weight:600;font-size:0.88rem">${h.date}</div>
-          <div class="muted">${h.score}/${h.total} correctas</div>
-        </div>
-        <div style="font-size:1.3rem;font-weight:800;color:${Utils.scoreColor(h.pct)}">${h.pct}%</div>
-      </div>
+    const color = (p) => (p >= 80 ? '' : p >= 60 ? 'amber' : 'coral');
+    container.innerHTML = history.slice(0, 5).map((h) => `
+      <a href="estadisticas.html" class="hist-row" aria-label="${Utils.sanitizeHTML(h.date)}: ${h.score} de ${h.total}, ${h.pct}%">
+        <span class="t3" style="font-size:.875rem;font-weight:600">${Utils.sanitizeHTML(Utils.fechaCorta(h.date))}</span>
+        <span class="well bar sm"><span class="${color(h.pct)}" style="width:${Math.max(0, Math.min(100, h.pct))}%"></span></span>
+        <strong class="num" style="text-align:right">${h.pct}%</strong>
+        <span class="chev" style="color:var(--text-5);display:flex">${typeof Icon !== 'undefined' ? Icon.svg('chev', 18) : ''}</span>
+      </a>
     `).join('');
   },
 
