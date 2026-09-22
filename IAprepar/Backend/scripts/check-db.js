@@ -5,11 +5,24 @@ const { pool } = require('../src/config/db');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
+// La contrasena NO se escribe en el codigo: llega por argumento o por variable
+// de entorno. Un script versionado con una contrasena dentro es una credencial
+// publicada.
+const pedirPassword = (variable) => {
+  const valor = process.argv[3] || process.env[variable];
+  if (!valor) {
+    console.error(`Falta la contrasena. Uso: node ${process.argv[1]} <email> <password>`);
+    console.error(`O define la variable de entorno ${variable}.`);
+    process.exit(1);
+  }
+  return valor;
+};
+
 async function testEndpoints() {
   try {
     // 1. Login to get token
-    const email = 'admin@preparia.co';
-    const password = 'Admin2025!';
+    const email = process.argv[2] || process.env.TEST_EMAIL || 'admin@preparia.co';
+    const password = pedirPassword('TEST_PASSWORD');
     
     const { rows } = await pool.query(
       'SELECT u.id, u.nombre, u.email, u.password_hash, u.activo, r.nombre AS rol FROM usuario u JOIN rol r ON r.id = u.id_rol WHERE u.email = $1',

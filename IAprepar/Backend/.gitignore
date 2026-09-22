@@ -5,12 +5,15 @@ node_modules/
 .env
 env.cloudrun.yaml
 
-# Scripts sensibles
-inject_log.js
-reset_db.js
-seed_users.js
-test_db.js
-test_prompt.js
+# Scripts sensibles (los nombres reales usan guion, no guion bajo)
+scripts/inject-log.js
+scripts/reset-db.js
+scripts/seed-users.js
+scripts/test-db.js
+scripts/test-prompt.js
+scripts/check-db.js
+scripts/test-api-remote.js
+scripts/test-reg-login.js
 
 # Logs
 logs/

@@ -5,10 +5,23 @@ require('dotenv').config();
 const bcrypt = require('bcryptjs');
 const { pool } = require('../src/config/db');
 
+// La contrasena NO se escribe en el codigo: llega por argumento o por variable
+// de entorno. Un script versionado con una contrasena dentro es una credencial
+// publicada.
+const pedirPassword = (variable) => {
+  const valor = process.argv[3] || process.env[variable];
+  if (!valor) {
+    console.error(`Falta la contrasena. Uso: node ${process.argv[1]} <email> <password>`);
+    console.error(`O define la variable de entorno ${variable}.`);
+    process.exit(1);
+  }
+  return valor;
+};
+
 async function fixAdminPassword() {
   try {
-    const email = 'admin@preparia.co';
-    const plainPassword = 'Admin2025!';
+    const email = process.argv[2] || process.env.ADMIN_EMAIL || 'admin@preparia.co';
+    const plainPassword = pedirPassword('ADMIN_PASSWORD');
     const saltRounds = parseInt(process.env.BCRYPT_SALT_ROUNDS || '12', 10);
 
     // 1. Verificar si el usuario existe
@@ -55,7 +68,7 @@ async function fixAdminPassword() {
       [email]
     );
     const finalMatch = await bcrypt.compare(plainPassword, verify[0].password_hash);
-    console.log(`\n🔑 Verificación final: bcrypt.compare("${plainPassword}") = ${finalMatch}`);
+    console.log(`\n🔑 Verificación final: la contraseña indicada coincide = ${finalMatch}`);
 
   } catch (err) {
     console.error('Error:', err.message);
