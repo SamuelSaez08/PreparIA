@@ -1,360 +1,438 @@
 'use strict';
 
-const PageNodo = {
-  async init() {
-    Auth.requireAuth();
-    Utils.setActiveNav();
-    Utils.renderUserInNav();
+/* ============================================================
+   PreparIA — page-nodo.js  ·  Pantalla de un tema
 
-    document.getElementById('logout-btn')?.addEventListener('click', () => Auth.logout());
+   Qué cambió respecto a la versión anterior:
+   · Todo el texto que viene del servidor se escapa antes de
+     pintarlo (nombres de temas, títulos y cuerpo del material).
+   · Una sola acción principal: practicar este tema.
+   · El material se lee como un documento: medida de línea corta,
+     índice lateral que sigue la lectura y barra flotante que
+     aparece al bajar, con la misma salida por la que se entró.
+   · El dominio del tema sale de /progreso/nodos, no del HTML.
+   ============================================================ */
 
-    const rawHash = window.location.hash.replace('#', '').trim();
-    let nodeId = null;
-    if (rawHash) {
-      if (rawHash.includes('=')) {
-        nodeId = new URLSearchParams(rawHash).get('id');
-      } else {
-        nodeId = rawHash;
-      }
-    }
-    if (!nodeId) {
-      nodeId = new URLSearchParams(window.location.search).get('id');
-    }
+const PageNodo = (() => {
+  const esc = (t) => (typeof Utils !== 'undefined' ? Utils.sanitizeHTML(t == null ? '' : String(t)) : String(t == null ? '' : t));
+  const ico = (nombre, tam = 20, grosor) => (typeof Icon !== 'undefined' ? Icon.svg(nombre, tam, grosor) : '');
+  const $ = (sel) => document.querySelector(sel);
 
-    console.log('[DEBUG nodo] URL:', window.location.href);
-    console.log('[DEBUG nodo] nodeId:', nodeId);
+  const ESTADOS = {
+    dominado:    { etiqueta: 'Dominado',          cta: 'Repasar este tema' },
+    en_progreso: { etiqueta: 'En progreso',       cta: 'Seguir practicando' },
+    disponible:  { etiqueta: 'Sin practicar',     cta: 'Empezar este tema' },
+    vacio:       { etiqueta: 'Sin preguntas aún', cta: 'Práctica no disponible' },
+  };
 
-    if (!nodeId) { window.location.href = 'ciencias-sociales.html'; return; }
+  const TIPOS = {
+    ejemplo:   { clase: 'ejemplo', icono: 'spark', etiqueta: 'Ejemplo' },
+    tip_icfes: { clase: 'tip',     icono: 'target', etiqueta: 'Tip ICFES' },
+    teoria:    { clase: 'teoria',  icono: 'book',  etiqueta: 'Teoría' },
+  };
 
-    // Cargar árbol del backend si no está cargado o si es la primera entrada
-    if (!TreeManager.getTree().length) {
-      console.log('[DEBUG nodo] Árbol vacío en local, cargando del backend...');
-      try {
-        const res = await NodosAPI.getArbol(1);
-        const datos = res.datos || res;
-        const backendTree = Array.isArray(datos) ? datos : (datos.hijos || datos.nodos || [datos]);
-        TreeManager.setTreeFromBackend(backendTree);
-        console.log('[DEBUG nodo] Árbol cargado del backend:', TreeManager.getTree().length, 'nodos raíz');
-      } catch (err) {
-        console.warn('[DEBUG nodo] Error cargando árbol del backend:', err);
-      }
-    }
+  let nodoActual = null;
+  let idActual = null;
+  let progresoTema = null;
+  let observador = null;
 
-    let node = TreeManager.getNodeById(nodeId);
+  /* ── Utilidades de datos ─────────────────────────────────────────────── */
 
-    // Si aún no se encuentra en el árbol local, forzar recarga del árbol completo
-    if (!node) {
-      console.log('[DEBUG nodo] Node no encontrado en árbol local, reintentando recargar árbol del backend...');
-      try {
-        const res = await NodosAPI.getArbol(1);
-        const datos = res.datos || res;
-        const backendTree = Array.isArray(datos) ? datos : (datos.hijos || datos.nodos || [datos]);
-        TreeManager.setTreeFromBackend(backendTree);
-        node = TreeManager.getNodeById(nodeId);
-      } catch (err) {
-        console.warn('[DEBUG nodo] Error reintentando recargar árbol:', err);
-      }
-    }
+  const leerIdDeLaUrl = () => {
+    const hash = window.location.hash.replace('#', '').trim();
+    if (hash) return hash.includes('=') ? new URLSearchParams(hash).get('id') : hash;
+    return new URLSearchParams(window.location.search).get('id');
+  };
 
-    if (!node) {
-      console.log('[DEBUG nodo] Intentando getNodo individual...');
-      try {
-        // Fetch individual node info
-        const res = await NodosAPI.getNodo(nodeId);
-        const raw = res.datos || res;
-        console.log('[DEBUG nodo] getNodo respuesta raw:', raw);
+  const mapearNodo = (raw, hijos = []) => ({
+    id: raw.id,
+    label: raw.nombre || 'Sin nombre',
+    description: raw.descripcion || '',
+    children: hijos,
+  });
 
-        // Also fetch children of this node from backend
-        let hijosTransformed = [];
-        try {
-          const hijosRes = await NodosAPI.getNodos({ padre: nodeId });
-          const hijosRaw = (hijosRes && hijosRes.datos) ? hijosRes.datos : [];
-          console.log('[DEBUG nodo] hijos del nodo:', hijosRaw.length);
-          hijosTransformed = hijosRaw.map(h => ({
-            id: h.id,
-            label: h.nombre || 'Sin nombre',
-            icon: (h.icono && h.icono.length <= 4) ? h.icono : (h.descripcion && h.descripcion.length <= 4 ? h.descripcion : '📌'),
-            description: h.descripcion || '',
-            children: [],
-          }));
-        } catch (hijosErr) {
-          console.warn('[DEBUG nodo] No se pudieron cargar hijos:', hijosErr);
-        }
+  const cargarArbol = async () => {
+    try {
+      const res = await NodosAPI.getArbol(1);
+      const datos = res.datos || res;
+      const arbol = Array.isArray(datos) ? datos : (datos.hijos || datos.nodos || [datos]);
+      TreeManager.setTreeFromBackend(arbol);
+    } catch { /* se resuelve con getNodo */ }
+  };
 
-        node = {
-          id: raw.id,
-          label: raw.nombre || 'Sin nombre',
-          icon: (raw.icono && raw.icono.length <= 4) ? raw.icono : (raw.descripcion && raw.descripcion.length <= 4 ? raw.descripcion : '📌'),
-          description: raw.descripcion || '',
-          children: hijosTransformed,
-        };
-      } catch (err) {
-        console.error('[DEBUG nodo] getNodo falló:', err);
-        this.showError('No se encontró el nodo solicitado.');
-        return;
-      }
-    }
+  const buscarNodo = async (id) => {
+    if (!TreeManager.getTree().length) await cargarArbol();
+    let nodo = TreeManager.getNodeById(id);
+    if (nodo) return nodo;
 
-    if (!this._hashListenerAdded) {
-      this._hashListenerAdded = true;
-      window.addEventListener('hashchange', () => this.init());
-    }
+    await cargarArbol();
+    nodo = TreeManager.getNodeById(id);
+    if (nodo) return nodo;
 
-    this.renderHeader(node, nodeId);
-    await this.loadContent(node, nodeId);
-    this.renderChildren(node);
-    this.renderNavigation(nodeId);
-  },
+    // Último recurso: pedir el nodo y sus hijos sueltos.
+    const res = await NodosAPI.getNodo(id);
+    const raw = res.datos || res;
+    let hijos = [];
+    try {
+      const hijosRes = await NodosAPI.getNodos({ padre: id });
+      hijos = ((hijosRes && hijosRes.datos) || []).map(h => mapearNodo(h));
+    } catch { /* un tema sin hijos es normal */ }
+    return mapearNodo(raw, hijos);
+  };
 
-  renderHeader(node, nodeId) {
-    const iconEl = document.getElementById('node-icon');
-    const titleEl = document.getElementById('node-title');
-    const breadcrumbEl = document.getElementById('breadcrumb-current');
-    const metaEl = document.getElementById('node-meta');
-
-    if (iconEl) iconEl.textContent = node.icon || '📌';
-    if (titleEl) titleEl.textContent = node.label;
-    if (breadcrumbEl) breadcrumbEl.textContent = node.label;
-
-    const path = this.findPath(nodeId);
-    if (path.length > 1) {
-      const breadcrumbContainer = document.getElementById('node-breadcrumb');
-      if (breadcrumbContainer) {
-        breadcrumbContainer.innerHTML = `
-          <a href="dashboard.html" class="crumb">Inicio</a>
-          <span class="crumb-sep">→</span>
-          <a href="ciencias-sociales.html" class="crumb">Ciencias Sociales</a>
-          ${path.slice(0, -1).map(p => `
-            <span class="crumb-sep">→</span>
-            <a href="nodo.html#id=${encodeURIComponent(p.id)}" class="crumb">${p.label}</a>
-          `).join('')}
-          <span class="crumb-sep">→</span>
-          <span class="crumb active">${node.label}</span>
-        `;
-      }
-    }
-
-    if (metaEl) {
-      const chips = [];
-      const hasChildren = node.children && node.children.length > 0;
-      if (hasChildren) {
-        chips.push(`<span class="node-meta-chip">📂 ${node.children.length} subtema${node.children.length > 1 ? 's' : ''}</span>`);
-      } else {
-        chips.push(`<span class="node-meta-chip">📄 Tema de estudio</span>`);
-      }
-      if (node.custom) chips.push(`<span class="node-meta-chip custom">✨ Nodo personalizado</span>`);
-      metaEl.innerHTML = chips.join('');
-    }
-
-    document.title = `PreparIA — ${node.label}`;
-  },
-
-  findPath(nodeId) {
-    const tree = TreeManager.getTree();
-    const path = [];
-    const search = (nodes, trail) => {
-      for (const n of nodes) {
-        const currentTrail = [...trail, { id: n.id, label: n.label, icon: n.icon }];
-        if (String(n.id) === String(nodeId)) { path.push(...currentTrail); return true; }
-        if (n.children && search(n.children, currentTrail)) return true;
+  const rutaHasta = (id) => {
+    const camino = [];
+    const buscar = (nodos, previo) => {
+      for (const n of nodos) {
+        const paso = [...previo, { id: n.id, label: n.label }];
+        if (String(n.id) === String(id)) { camino.push(...paso); return true; }
+        if (n.children && buscar(n.children, paso)) return true;
       }
       return false;
     };
-    search(tree, []);
-    return path;
-  },
+    buscar(TreeManager.getTree(), []);
+    return camino;
+  };
 
-  async loadContent(node, nodeId) {
-    const contentArea = document.getElementById('node-content-area');
-    if (!contentArea) return;
+  const aplanarArbol = () => {
+    const plano = [];
+    const recorrer = (nodos) => nodos.forEach(n => { plano.push(n); if (n.children?.length) recorrer(n.children); });
+    recorrer(TreeManager.getTree());
+    return plano;
+  };
 
-    const esNodoBackend = typeof node.id === 'number' || !isNaN(parseInt(nodeId));
-    console.log('[DEBUG loadContent] node.id:', node.id, typeof node.id, '| nodeId param:', nodeId, '| esNodoBackend:', esNodoBackend);
+  /** Dominio real del tema, si /progreso/nodos lo conoce. */
+  const cargarProgreso = async (id) => {
+    if (typeof ProgresoRuta === 'undefined') return null;
+    try {
+      const { temas } = await ProgresoRuta.cargar(1);
+      return temas.find(t => String(t.id) === String(id)) || null;
+    } catch { return null; }
+  };
 
-    const hasValidDesc = node.description && node.description.trim().length > 4;
+  /* ── Cabecera ────────────────────────────────────────────────────────── */
 
-    if (!esNodoBackend) {
-      // Nodo local sin ID numérico
-      contentArea.innerHTML = hasValidDesc
-        ? `<div class="node-content-card"><div class="node-content-text">${this.formatContent(node.description)}</div></div>`
-        : (node.children && node.children.length ? '' : this._emptyContent('Sin contenido disponible', 'Este es un nodo del árbol sin material asignado.'));
-      return;
-    }
+  const pintarCabecera = () => {
+    const nodo = nodoActual;
+    const hijos = nodo.children || [];
+    const p = progresoTema;
+    const estado = (p && p.estado) || (hijos.length ? null : 'disponible');
 
-    // Mostrar skeleton mientras carga
-    contentArea.innerHTML = `
-      <div class="node-content-card" style="opacity:0.4">
-        <div style="height:1rem;background:rgba(255,255,255,0.1);border-radius:4px;margin-bottom:12px;width:60%"></div>
-        <div style="height:0.8rem;background:rgba(255,255,255,0.07);border-radius:4px;margin-bottom:8px"></div>
-        <div style="height:0.8rem;background:rgba(255,255,255,0.07);border-radius:4px;margin-bottom:8px;width:80%"></div>
-        <div style="height:0.8rem;background:rgba(255,255,255,0.07);border-radius:4px;width:90%"></div>
-      </div>`;
+    document.title = `PreparIA — ${nodo.label}`;
+
+    // Migas: la última no es enlace, es dónde estás.
+    const camino = rutaHasta(idActual);
+    const intermedios = camino.slice(0, -1).map(n =>
+      `<span class="sep">/</span><a href="nodo.html#id=${encodeURIComponent(n.id)}">${esc(n.label)}</a>`).join('');
+    $('#tema-crumbs').innerHTML = `
+      <a href="dashboard.html">Inicio</a>
+      <span class="sep">/</span>
+      <a href="ciencias-sociales.html">Ciencias Sociales</a>
+      ${intermedios}
+      <span class="sep">/</span>
+      <span class="ahora">${esc(nodo.label)}</span>`;
+
+    const iconoTema = hijos.length ? 'tree' : (estado === 'dominado' ? 'check' : 'book');
+    const cajaIco = $('#tema-ico');
+    cajaIco.className = `tema-ico${estado === 'dominado' || !hijos.length ? '' : ' dim'}`;
+    cajaIco.innerHTML = ico(iconoTema, 26, 2.2);
+
+    $('#tema-nombre').textContent = nodo.label;
+
+    const desc = (nodo.description || '').trim();
+    const descEl = $('#tema-desc');
+    // Una descripción corta suele ser un emoji o una etiqueta, no un texto.
+    if (desc.length > 4) { descEl.textContent = desc; descEl.hidden = false; } else { descEl.hidden = true; }
+
+    const chips = [];
+    if (estado) chips.push(`<span class="status ${estado}">${ESTADOS[estado].etiqueta}</span>`);
+    if (p && p.preguntas > 0) chips.push(`<span class="t4" style="font-size:.8125rem;font-weight:600">${p.preguntas} preguntas en el banco</span>`);
+    if (hijos.length) chips.push(`<span class="t4" style="font-size:.8125rem;font-weight:600">${hijos.length} subtema${hijos.length > 1 ? 's' : ''}</span>`);
+    const ultima = p && typeof ProgresoRuta !== 'undefined' ? ProgresoRuta.haceCuanto(p.ultima_practica) : null;
+    if (ultima) chips.push(`<span class="t4" style="font-size:.8125rem;font-weight:600">Practicado ${esc(ultima)}</span>`);
+    $('#tema-chips').innerHTML = chips.join('') || '<span class="t4" style="font-size:.8125rem;font-weight:600">Tema de estudio</span>';
+
+    // Una sola acción principal por pantalla.
+    const acciones = $('#tema-acciones');
+    const puedePracticar = p ? p.preguntas > 0 : !hijos.length;
+    acciones.innerHTML = `
+      ${puedePracticar ? `<button type="button" class="btn btn-primary" data-practicar>${ico('play', 18)}<span>${(ESTADOS[estado] || ESTADOS.disponible).cta}</span></button>` : ''}
+      <a href="ciencias-sociales.html" class="btn btn-secondary">${ico('route', 18)}<span>Ver en la ruta</span></a>`;
+
+    $('[data-bar-titulo]').textContent = nodo.label;
+    $('[data-bar-sub]').textContent = camino.length > 1 ? camino[0].label : 'Ciencias Sociales';
+    const botonBarra = $('.tema-bar [data-practicar]');
+    if (botonBarra) botonBarra.hidden = !puedePracticar;
+
+    document.querySelectorAll('[data-practicar]').forEach(b => {
+      b.addEventListener('click', () => practicar(b));
+    });
+  };
+
+  /* ── Práctica del tema (banco de preguntas, 10 en 20 minutos) ────────── */
+
+  const practicar = async (boton) => {
+    if (typeof IAAPI === 'undefined') return;
+    const botones = Array.from(document.querySelectorAll('[data-practicar]'));
+    const original = botones.map(b => b.innerHTML);
+    botones.forEach(b => { b.disabled = true; });
+    if (boton) boton.innerHTML = '<span>Preparando…</span>';
+    UI.showToast(`Buscando preguntas de "${nodoActual.label}" en el banco…`);
 
     try {
-      const res = await NodosAPI.getMaterial(nodeId);
-      console.log('[DEBUG loadContent] respuesta getMaterial:', res);
-
-      const materiales = (res && res.datos) ? res.datos : [];
-      console.log('[DEBUG loadContent] materiales.length:', materiales.length);
-
-      if (materiales.length === 0) {
-        const hasChildren = node.children && node.children.length > 0;
-        if (hasChildren) {
-          contentArea.innerHTML = hasValidDesc
-            ? `<div class="node-content-card"><div class="node-content-text">${this.formatContent(node.description)}</div></div>`
-            : ''; // los hijos se renderizan abajo en renderChildren
-        } else if (hasValidDesc) {
-          contentArea.innerHTML = `<div class="node-content-card"><div class="node-content-text">${this.formatContent(node.description)}</div></div>`;
-        } else {
-          contentArea.innerHTML = this._emptyContent('Sin contenido disponible', 'Este nodo aún no tiene material de estudio asignado.');
-        }
-        return;
-      }
-
-      // Renderizar materiales
-      let html = '';
-      materiales.forEach(mat => {
-        const titulo = Utils.sanitizeHTML(mat.titulo || 'Material de Estudio');
-        const contenidoFormatted = this.formatContent(mat.contenido || mat.cuerpo || '');
-
-        if (mat.tipo === 'ejemplo') {
-          html += `
-            <div class="node-content-card" style="border-left:3px solid var(--accent)">
-              <h4 style="margin-bottom:12px;font-size:1rem;color:var(--accent)">
-                💡 ${titulo}
-              </h4>
-              <div class="node-content-text">${contenidoFormatted}</div>
-            </div>`;
-        } else if (mat.tipo === 'tip_icfes') {
-          html += `
-            <div class="node-content-card" style="border-left:3px solid var(--coral);background:rgba(255,107,79,0.06)">
-              <h4 style="margin-bottom:12px;font-size:1rem;color:var(--coral)">
-                🎯 ${titulo}
-              </h4>
-              <div class="node-content-text">${contenidoFormatted}</div>
-            </div>`;
-        } else {
-          // 'teoria', 'texto', o cualquier otro tipo
-          html += `
-            <div class="node-content-card">
-              <h4 style="margin-bottom:12px;font-size:1rem;color:var(--accent)">
-                📖 ${titulo}
-              </h4>
-              <div class="node-content-text">${contenidoFormatted}</div>
-            </div>`;
-        }
+      const res = await IAAPI.generarSimulacro({
+        id_materia: 1,
+        id_nivel: 3,
+        id_nodo: Number(idActual),
+        cantidad: 10,
+        duracion_minutos: 20,
+        mezclar_dificultad: true,
+        titulo: `Práctica: ${nodoActual.label}`,
       });
-
-      contentArea.innerHTML = html;
-
+      const idSimulacro = res.datos && res.datos.id_simulacro;
+      if (!idSimulacro) throw new Error('El servidor no devolvió el simulacro.');
+      window.location.href = `simulacros.html#simulacro=${idSimulacro}`;
     } catch (err) {
-      console.error('[DEBUG loadContent] Error:', err);
-      contentArea.innerHTML = `
-        <div class="node-empty">
-          <div class="empty-icon">⚠️</div>
-          <p style="font-weight:600;font-size:1.05rem;color:var(--coral);margin-bottom:8px;">Error al cargar el contenido</p>
-          <p style="font-size:0.9rem">${err.mensaje || 'No se pudo conectar con el servidor.'}</p>
-          <button onclick="location.reload()" class="btn btn-ghost btn-sm" style="margin-top:16px">🔄 Reintentar</button>
-        </div>`;
+      UI.showToast(err.mensaje || err.message || 'No se pudo preparar la práctica de este tema.', 'error');
+      botones.forEach((b, i) => { b.disabled = false; b.innerHTML = original[i]; });
     }
-  },
+  };
 
-  _emptyContent(title, body) {
-    return `
-      <div class="node-empty">
-        <div class="empty-icon">📭</div>
-        <p style="font-weight:600;font-size:1.05rem;margin-bottom:8px;">${title}</p>
-        <p style="font-size:0.9rem">${body}</p>
+  /* ── Contenido ───────────────────────────────────────────────────────── */
+
+  /** Escapa primero y solo entonces arma los párrafos. */
+  const formatear = (texto) => String(texto || '')
+    .split(/\n\n+/)
+    .filter(p => p.trim())
+    .map(p => `<p>${esc(p).replace(/\n/g, '<br>')}</p>`)
+    .join('');
+
+  const vacio = (icono, titulo, cuerpo) => `
+    <div class="clay tema-vacio">
+      <span class="ico-redondo">${ico(icono, 22)}</span>
+      <strong style="font-size:1rem">${esc(titulo)}</strong>
+      <p class="t3" style="font-size:.9375rem;max-width:44ch">${esc(cuerpo)}</p>
+    </div>`;
+
+  const pintarContenido = async () => {
+    const zona = $('#tema-contenido');
+    const nodo = nodoActual;
+    const hijos = nodo.children || [];
+    const descripcion = (nodo.description || '').trim();
+    const esNumerico = !isNaN(parseInt(idActual, 10));
+
+    let materiales = [];
+    if (esNumerico) {
+      try {
+        const res = await NodosAPI.getMaterial(idActual);
+        materiales = (res && res.datos) ? res.datos : [];
+      } catch (err) {
+        zona.innerHTML = `
+          <div class="clay tema-vacio">
+            <span class="ico-redondo" style="color:var(--coral)">${ico('info', 22)}</span>
+            <strong style="font-size:1rem">No se pudo cargar el contenido</strong>
+            <p class="t3" style="font-size:.9375rem;max-width:44ch">${esc(err.mensaje || 'Revisa tu conexión e inténtalo de nuevo.')}</p>
+            <button type="button" class="btn btn-secondary btn-sm" data-reintentar>${ico('refresh', 16)}<span>Reintentar</span></button>
+          </div>`;
+        zona.querySelector('[data-reintentar]')?.addEventListener('click', () => pintarContenido());
+        return [];
+      }
+    }
+
+    if (!materiales.length) {
+      if (descripcion.length > 4) {
+        zona.innerHTML = `<article class="clay mat teoria"><div class="prosa">${formatear(descripcion)}</div></article>`;
+      } else if (hijos.length) {
+        zona.innerHTML = vacio('tree', 'Este tema agrupa subtemas', 'Elige uno de los subtemas de la derecha para estudiar su contenido.');
+      } else {
+        zona.innerHTML = vacio('book', 'Sin material todavía', 'Este tema aún no tiene material de estudio. Puedes practicarlo con las preguntas del banco.');
+      }
+      return [];
+    }
+
+    const secciones = materiales.map((mat, i) => {
+      const tipo = TIPOS[mat.tipo] || TIPOS.teoria;
+      const titulo = mat.titulo || tipo.etiqueta;
+      const cuerpo = formatear(mat.contenido || mat.cuerpo || '');
+      return { id: `mat-${i + 1}`, titulo, tipo, html: `
+        <article class="clay mat ${tipo.clase}" id="mat-${i + 1}">
+          <div class="mat-head">
+            <span class="mat-ico">${ico(tipo.icono, 18)}</span>
+            <h2>${esc(titulo)}</h2>
+            <span class="lbl">${tipo.etiqueta}</span>
+          </div>
+          <div class="prosa">${cuerpo}</div>
+        </article>` };
+    });
+
+    zona.innerHTML = secciones.map(s => s.html).join('');
+    return secciones;
+  };
+
+  /* ── Panel lateral: índice, dominio y subtemas ───────────────────────── */
+
+  const pintarLateral = (secciones) => {
+    const aside = $('#tema-aside');
+    const hijos = nodoActual.children || [];
+    const p = progresoTema;
+    const bloques = [];
+
+    if (p && (p.preguntas > 0 || p.porcentaje > 0)) {
+      const barra = p.estado === 'dominado' ? '' : p.estado === 'en_progreso' ? 'amber' : 'dim';
+      bloques.push(`
+        <section class="clay card-pad dominio" aria-labelledby="dom-t">
+          <span class="lbl" id="dom-t">Tu dominio del tema</span>
+          <div class="dominio-cifra"><strong class="num">${p.porcentaje}%</strong><span class="t4" style="font-size:.8125rem;font-weight:600">de 80% para dominarlo</span></div>
+          <div class="well bar"><span class="${barra}" style="width:${Math.max(2, p.porcentaje)}%"></span></div>
+        </section>`);
+    }
+
+    if (secciones.length > 1) {
+      bloques.push(`
+        <nav class="clay card-pad stack gap-12 toc-card" aria-labelledby="idx-t">
+          <span class="lbl" id="idx-t">En esta página</span>
+          <div class="toc" id="tema-toc">
+            ${secciones.map(s => `<a href="#${s.id}" data-ir="${s.id}">${esc(s.titulo)}</a>`).join('')}
+          </div>
+        </nav>`);
+    }
+
+    if (hijos.length) {
+      bloques.push(`
+        <section class="clay stack gap-4" style="padding:20px 8px 12px" aria-labelledby="sub-t">
+          <span class="lbl" id="sub-t" style="padding:0 12px 6px">Subtemas</span>
+          ${hijos.map((h, i) => `
+            <a href="nodo.html#id=${encodeURIComponent(h.id)}" class="sub-row lift">
+              <span class="num">${i + 1}</span>
+              <span class="stack gap-4" style="min-width:0">
+                <strong style="font-size:.9375rem">${esc(h.label)}</strong>
+                ${h.children?.length ? `<small class="t4" style="font-size:.75rem">${h.children.length} subtema${h.children.length > 1 ? 's' : ''}</small>` : ''}
+              </span>
+              <span class="chev">${ico('chev', 18)}</span>
+            </a>`).join('')}
+        </section>`);
+    }
+
+    aside.innerHTML = bloques.join('');
+    aside.hidden = !bloques.length;
+
+    // El índice sigue la lectura y el salto respeta "movimiento reducido".
+    if (secciones.length > 1) seguirLectura(secciones);
+  };
+
+  const seguirLectura = (secciones) => {
+    const enlaces = new Map(secciones.map(s => [s.id, document.querySelector(`[data-ir="${s.id}"]`)]));
+    const suave = !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    enlaces.forEach((enlace, id) => {
+      enlace?.addEventListener('click', (e) => {
+        e.preventDefault();
+        // No se toca el hash: aquí el hash es el id del tema, no la sección.
+        document.getElementById(id)?.scrollIntoView({ behavior: suave ? 'smooth' : 'auto', block: 'start' });
+      });
+    });
+
+    observador?.disconnect();
+    observador = new IntersectionObserver((entradas) => {
+      entradas.forEach(en => {
+        if (!en.isIntersecting) return;
+        enlaces.forEach(a => a?.classList.remove('aqui'));
+        enlaces.get(en.target.id)?.classList.add('aqui');
+      });
+    }, { rootMargin: '-96px 0px -70% 0px', threshold: 0 });
+    secciones.forEach(s => { const el = document.getElementById(s.id); if (el) observador.observe(el); });
+  };
+
+  /* ── Anterior / siguiente ────────────────────────────────────────────── */
+
+  const pintarPrevNext = () => {
+    const plano = aplanarArbol();
+    const i = plano.findIndex(n => String(n.id) === String(idActual));
+    const nav = $('#tema-prevnext');
+    if (i === -1) { nav.hidden = true; return; }
+
+    const previo = i > 0 ? plano[i - 1] : null;
+    const siguiente = i < plano.length - 1 ? plano[i + 1] : null;
+    if (!previo && !siguiente) { nav.hidden = true; return; }
+
+    nav.hidden = false;
+    nav.innerHTML = `
+      ${previo ? `<a class="clay pn lift" href="nodo.html#id=${encodeURIComponent(previo.id)}"><small>Anterior</small><strong>${esc(previo.label)}</strong></a>` : '<span></span>'}
+      ${siguiente ? `<a class="clay pn siguiente lift" href="nodo.html#id=${encodeURIComponent(siguiente.id)}"><small>Siguiente</small><strong>${esc(siguiente.label)}</strong></a>` : ''}`;
+  };
+
+  /* ── Barra flotante + progreso de lectura ────────────────────────────── */
+
+  const barraFlotante = () => {
+    const barra = $('#tema-bar');
+    const linea = $('#tema-leido');
+    const cabecera = $('#tema-head');
+    let pendiente = false;
+
+    const pintar = () => {
+      pendiente = false;
+      const limite = cabecera.offsetTop + cabecera.offsetHeight - 40;
+      const visible = window.scrollY > limite;
+      barra.classList.toggle('visible', visible);
+      barra.setAttribute('aria-hidden', visible ? 'false' : 'true');
+
+      const alto = document.documentElement.scrollHeight - window.innerHeight;
+      const leido = alto > 0 ? Math.min(1, Math.max(0, window.scrollY / alto)) : 0;
+      linea.style.transform = `scaleX(${leido})`;
+    };
+
+    // rAF: una lectura de layout por cuadro, nunca una por evento de scroll.
+    window.addEventListener('scroll', () => {
+      if (!pendiente) { pendiente = true; requestAnimationFrame(pintar); }
+    }, { passive: true });
+    pintar();
+  };
+
+  /* ── Errores ─────────────────────────────────────────────────────────── */
+
+  const mostrarError = (mensaje) => {
+    $('#tema-head').hidden = true;
+    $('#tema-aside').hidden = true;
+    $('#tema-prevnext').hidden = true;
+    $('#tema-contenido').innerHTML = `
+      <div class="clay tema-vacio">
+        <span class="ico-redondo" style="color:var(--coral)">${ico('info', 22)}</span>
+        <strong style="font-size:1rem">${esc(mensaje)}</strong>
+        <a href="ciencias-sociales.html" class="btn btn-secondary btn-sm">${ico('back', 16)}<span>Volver a la ruta</span></a>
       </div>`;
-  },
+  };
 
-  formatContent(text) {
-    if (!text) return '';
-    return text.split(/\n\n+/).map(p => `<p>${p.replace(/\n/g, '<br>')}</p>`).join('');
-  },
+  /* ── Arranque ────────────────────────────────────────────────────────── */
 
-  renderChildren(node) {
-    const section = document.getElementById('node-children-section');
-    const list = document.getElementById('node-children-list');
-    if (!section || !list) return;
+  const init = async () => {
+    Auth.requireAuth();
 
-    if (!node.children || !node.children.length) {
-      section.style.display = 'none';
-      list.innerHTML = '';
+    idActual = leerIdDeLaUrl();
+    if (!idActual) { window.location.href = 'ciencias-sociales.html'; return; }
+
+    if (!PageNodo._hashListo) {
+      PageNodo._hashListo = true;
+      window.addEventListener('hashchange', () => { window.scrollTo({ top: 0 }); init(); });
+      barraFlotante();
+    }
+
+    try {
+      nodoActual = await buscarNodo(idActual);
+    } catch {
+      mostrarError('No encontramos este tema.');
       return;
     }
 
-    section.style.display = 'block';
-    list.innerHTML = node.children.map(child => {
-      const hasGrandchildren = child.children && child.children.length > 0;
-      return `
-        <a href="nodo.html#id=${encodeURIComponent(child.id)}" class="node-child-item">
-          <div class="node-child-icon">${child.icon || '📌'}</div>
-          <div>
-            <div class="node-child-label">${child.label}</div>
-            ${hasGrandchildren ? `<div class="muted" style="font-size:0.78rem;margin-top:2px">${child.children.length} subtema${child.children.length > 1 ? 's' : ''}</div>` : ''}
-            ${child.custom ? '<span class="badge badge-sky" style="font-size:0.6rem;margin-top:4px">Custom</span>' : ''}
-          </div>
-          <div class="node-child-arrow">→</div>
-        </a>
-      `;
-    }).join('');
-  },
+    progresoTema = await cargarProgreso(idActual);
 
-  showError(message) {
-    const contentArea = document.getElementById('node-content-area');
-    const heroEl = document.getElementById('node-hero');
-    if (heroEl) heroEl.style.display = 'none';
-    if (contentArea) {
-      contentArea.innerHTML = `
-        <div class="node-empty">
-          <div class="empty-icon">😕</div>
-          <p style="font-weight:600;font-size:1.05rem;margin-bottom:8px;">${message}</p>
-          <a href="ciencias-sociales.html" class="btn btn-ghost btn-sm" style="margin-top:16px">← Volver al árbol</a>
-        </div>`;
-    }
-  },
+    $('#tema-head').hidden = false;
+    pintarCabecera();
+    const secciones = await pintarContenido();
+    pintarLateral(secciones);
+    pintarPrevNext();
 
-  getFlattenedTree() {
-    const flat = [];
-    const traverse = (nodes) => {
-      for (const n of nodes) {
-        flat.push(n);
-        if (n.children && n.children.length > 0) traverse(n.children);
-      }
-    };
-    traverse(TreeManager.getTree());
-    return flat;
-  },
+    if (typeof Icon !== 'undefined' && Icon.hydrate) Icon.hydrate();
+  };
 
-  renderNavigation(nodeId) {
-    const flat = this.getFlattenedTree();
-    const idx = flat.findIndex(n => String(n.id) === String(nodeId));
-
-    const navContainer = document.getElementById('node-navigation');
-    const btnPrev = document.getElementById('btn-prev-node');
-    const btnNext = document.getElementById('btn-next-node');
-
-    if (!navContainer || idx === -1) return;
-
-    navContainer.style.display = 'flex';
-
-    if (idx > 0) {
-      const prev = flat[idx - 1];
-      btnPrev.style.visibility = 'visible';
-      btnPrev.innerHTML = `← ${Utils.sanitizeHTML(prev.label)}`;
-      btnPrev.onclick = () => window.location.href = `nodo.html#id=${encodeURIComponent(prev.id)}`;
-    } else {
-      btnPrev.style.visibility = 'hidden';
-    }
-
-    if (idx < flat.length - 1) {
-      const next = flat[idx + 1];
-      btnNext.style.visibility = 'visible';
-      btnNext.innerHTML = `${Utils.sanitizeHTML(next.label)} →`;
-      btnNext.onclick = () => window.location.href = `nodo.html#id=${encodeURIComponent(next.id)}`;
-    } else {
-      btnNext.style.visibility = 'hidden';
-    }
-  },
-};
+  return { init };
+})();

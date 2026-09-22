@@ -1,372 +1,241 @@
 <!DOCTYPE html>
 <html lang="es">
-
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PreparIA — Contenido del Nodo</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>PreparIA — Tema</title>
   <meta name="robots" content="noindex, nofollow">
-  <link rel="icon" type="image/svg+xml"
-    href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎓</text></svg>">
-  <link rel="stylesheet" href="css/styles.css">
+  <meta name="theme-color" content="#0A0A1A">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎓</text></svg>">
+  <link rel="stylesheet" href="css/styles.css?v=2">
   <link rel="stylesheet" href="css/clay.css?v=2.1.0">
   <style>
-    /* ── Node Content Page ── */
-    .node-page-hero {
-      position: relative;
-      padding: 48px 0 32px;
-      border-bottom: 2px solid rgba(245, 245, 240, 0.08);
-      margin-bottom: 40px;
-      overflow: hidden;
-      position: relative;
-      z-index: 1;
-    }
+    /* ══════════════════════════════════════════════════════════
+       Tema (nodo.html) — capa propia sobre clay v2.
+       Materiales translúcidos, una sola acción principal y
+       tipografía de lectura larga.
+       ══════════════════════════════════════════════════════════ */
 
-    .node-page-hero::before {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background: radial-gradient(ellipse at 20% 60%, rgba(191, 255, 0, 0.06) 0%, transparent 60%),
-        radial-gradient(ellipse at 80% 30%, rgba(78, 205, 196, 0.04) 0%, transparent 50%);
+    /* ── Barra flotante: aparece al bajar, no ocupa sitio fijo ── */
+    .v2 .tema-bar {
+      position: fixed; top: 0; left: var(--side-w); right: 0; z-index: 60;
+      display: flex; align-items: center; gap: 12px;
+      padding: 10px 40px 12px;
+      background: rgba(10, 10, 26, 0.72);
+      backdrop-filter: blur(20px) saturate(180%);
+      -webkit-backdrop-filter: blur(20px) saturate(180%);
+      opacity: 0; transform: translateY(-100%);
+      transition: opacity 240ms var(--ease-out), transform 240ms var(--ease-out);
       pointer-events: none;
+      /* sin borde duro: el material se desvanece donde toca el contenido */
+      -webkit-mask-image: linear-gradient(to bottom, #000 74%, transparent);
+      mask-image: linear-gradient(to bottom, #000 74%, transparent);
+      padding-bottom: 20px;
+    }
+    .v2 .tema-bar.visible { opacity: 1; transform: translateY(0); pointer-events: auto; }
+    .v2 .tema-bar-txt { min-width: 0; }
+    .v2 .tema-bar-txt strong {
+      display: block; font-size: 0.9375rem; font-weight: 700; letter-spacing: -0.01em;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .v2 .tema-bar-txt small { font-size: 0.75rem; color: var(--text-4); }
+    .v2 .tema-bar .btn { flex-shrink: 0; }
+    /* Progreso de lectura: una línea fina, sin números */
+    .v2 .tema-leido {
+      position: absolute; left: 0; bottom: 8px; height: 2px; width: 100%;
+      transform: scaleX(0); transform-origin: 0 50%;
+      background: var(--acid); opacity: .85;
     }
 
-    .node-icon-large {
-      width: 72px;
-      height: 72px;
-      background: var(--acid-glow);
-      border: 3px solid var(--acid);
-      border-radius: var(--radius-lg);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 2rem;
-      box-shadow: var(--shadow-solid-sm);
-      margin-bottom: 20px;
-      animation: fade-in-up 0.5s ease forwards;
+    /* ── Migas ── */
+    .v2 .crumbs { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 0.8125rem; }
+    .v2 .crumbs a, .v2 .crumbs span { color: var(--text-4); font-weight: 600; }
+    .v2 .crumbs a { border-radius: 8px; padding: 2px 4px; transition: color 140ms var(--ease-out); }
+    .v2 .crumbs a:hover { color: var(--acid); }
+    .v2 .crumbs .sep { color: var(--text-5); }
+    .v2 .crumbs .ahora { color: var(--text-2); }
+
+    /* ── Cabecera del tema ── */
+    .v2 .tema-head { display: flex; flex-direction: column; gap: 18px; }
+    .v2 .tema-titulo { display: flex; gap: 18px; align-items: flex-start; }
+    .v2 .tema-ico {
+      width: 58px; height: 58px; flex-shrink: 0; border-radius: 18px;
+      display: grid; place-items: center; color: var(--bg);
+      background: var(--acid); box-shadow: 0 6px 0 var(--acid-lip);
+    }
+    .v2 .tema-ico.dim { background: var(--raised); color: var(--text-3); box-shadow: 0 6px 0 var(--lip-dark); }
+    .v2 .tema-desc { font-size: 1rem; color: var(--text-3); max-width: 62ch; line-height: 1.6; }
+    .v2 .tema-chips { display: flex; align-items: center; gap: 10px 20px; flex-wrap: wrap; }
+    .v2 .tema-acciones { display: flex; gap: 12px; flex-wrap: wrap; }
+
+    /* ── Dominio ── */
+    .v2 .dominio { display: flex; flex-direction: column; gap: 10px; }
+    .v2 .dominio-cifra { display: flex; align-items: baseline; gap: 8px; }
+    .v2 .dominio-cifra strong { font-size: 2rem; font-weight: 800; letter-spacing: -0.03em; }
+
+    /* ── Tarjetas de material ── */
+    .v2 .mat { padding: 30px 34px; scroll-margin-top: 92px; }
+    .v2 .mat + .mat { margin-top: 18px; }
+    .v2 .mat-head { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; }
+    .v2 .mat-ico {
+      width: 34px; height: 34px; border-radius: 11px; flex-shrink: 0;
+      display: grid; place-items: center;
+      background: var(--raised); color: var(--text-2);
+    }
+    .v2 .mat.teoria  .mat-ico { background: rgba(191, 255, 0, .14); color: var(--acid); }
+    .v2 .mat.ejemplo .mat-ico { background: rgba(255, 217, 61, .14); color: var(--amber); }
+    .v2 .mat.tip     .mat-ico { background: rgba(255, 107, 107, .14); color: var(--coral); }
+    .v2 .mat-head h2 { font-size: 1.0625rem; letter-spacing: -0.01em; }
+    .v2 .mat-head .lbl { margin-left: auto; }
+
+    /* Lectura larga: medida, interlineado y tracking propios del tamaño */
+    .v2 .prosa { max-width: 68ch; }
+    .v2 .prosa p { font-size: 1.0125rem; line-height: 1.75; letter-spacing: 0; color: var(--text-2); }
+    .v2 .prosa p + p { margin-top: 14px; }
+    .v2 .prosa strong { color: var(--text); font-weight: 700; }
+
+    /* ── Índice lateral con seguimiento de lectura ── */
+    .v2 .tema-aside { position: sticky; top: 92px; display: flex; flex-direction: column; gap: 18px; }
+    .v2 .toc { display: flex; flex-direction: column; gap: 2px; }
+    .v2 .toc a {
+      display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 12px;
+      font-size: 0.875rem; font-weight: 600; color: var(--text-4);
+      transition: color 160ms var(--ease-out), background 160ms var(--ease-out);
+    }
+    .v2 .toc a::before {
+      content: ''; width: 3px; align-self: stretch; border-radius: 999px;
+      background: var(--raised); transition: background 160ms var(--ease-out);
+    }
+    .v2 .toc a:hover { color: var(--text-2); background: rgba(245, 245, 240, .04); }
+    .v2 .toc a.aqui { color: var(--text); }
+    .v2 .toc a.aqui::before { background: var(--acid); }
+
+    /* ── Subtemas ── */
+    .v2 .sub-row { display: flex; align-items: center; gap: 14px; padding: 14px 16px; border-radius: 16px; }
+    .v2 .sub-row .num {
+      width: 30px; height: 30px; border-radius: 10px; flex-shrink: 0;
+      display: grid; place-items: center; background: var(--raised);
+      font-size: 0.8125rem; font-weight: 800; color: var(--text-3);
+    }
+    .v2 .sub-row .chev { margin-left: auto; color: var(--text-5); transition: transform 160ms var(--ease-out); }
+    .v2 .sub-row:hover .chev { transform: translateX(3px); color: var(--acid); }
+
+    /* ── Anterior / siguiente ── */
+    .v2 .tema-prevnext { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin-top: 28px; }
+    .v2 .pn {
+      display: flex; flex-direction: column; gap: 4px; padding: 16px 20px; border-radius: 18px; min-width: 0;
+    }
+    .v2 .pn small { font-size: 0.75rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--text-5); }
+    .v2 .pn strong { font-size: 0.9375rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .v2 .pn.siguiente { text-align: right; }
+
+    /* ── Respuesta al toque: siempre en el pointer-down ── */
+    .v2 .sub-row, .v2 .pn, .v2 .toc a { transition: transform 110ms var(--ease-out), background 160ms var(--ease-out), color 160ms var(--ease-out); }
+    .v2 .sub-row:active, .v2 .pn:active { transform: scale(.985); }
+
+    /* ── Estados vacíos y de error ── */
+    .v2 .tema-vacio { text-align: center; padding: 54px 24px; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+    .v2 .tema-vacio .ico-redondo {
+      width: 52px; height: 52px; border-radius: 16px; display: grid; place-items: center;
+      background: var(--raised); color: var(--text-4);
     }
 
-    .node-title {
-      font-size: clamp(1.5rem, 3.5vw, 2.2rem);
-      font-weight: 800;
-      letter-spacing: -0.03em;
-      margin-bottom: 8px;
-      animation: fade-in-up 0.5s ease forwards;
-      animation-delay: 0.1s;
-      opacity: 0;
+    @media (max-width: 1100px) {
+      .v2 .tema-bar { left: 0; padding-left: 20px; padding-right: 20px; top: 64px; }
+    }
+    @media (max-width: 860px) {
+      .v2 .tema-titulo { gap: 14px; }
+      .v2 .tema-ico { width: 48px; height: 48px; border-radius: 15px; }
+      .v2 .mat { padding: 22px 20px; }
+      .v2 .tema-prevnext { grid-template-columns: minmax(0, 1fr); }
+      .v2 .tema-aside { position: static; }
+      /* El índice de lectura no aporta cuando ya vas al final de la página */
+      .v2 .toc-card { display: none; }
     }
 
-    .node-breadcrumb-path {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      flex-wrap: wrap;
-      margin-bottom: 16px;
-      animation: fade-in-up 0.5s ease forwards;
-      animation-delay: 0.15s;
-      opacity: 0;
+    /* ── Accesibilidad ── */
+    @media (prefers-reduced-motion: reduce) {
+      .v2 .tema-bar { transition: opacity 160ms linear; transform: none !important; }
+      .v2 .sub-row:active, .v2 .pn:active { transform: none; }
+      .v2 .tema-leido { transition: none; }
     }
-
-    .node-breadcrumb-path .crumb {
-      font-size: 0.82rem;
-      font-weight: 600;
-      color: rgba(245, 245, 240, 0.45);
-      transition: color 0.2s;
+    @media (prefers-reduced-transparency: reduce) {
+      .v2 .tema-bar { background: var(--surface); backdrop-filter: none; -webkit-backdrop-filter: none;
+                      -webkit-mask-image: none; mask-image: none; border-bottom: 1px solid var(--line); }
     }
-
-    .node-breadcrumb-path .crumb:hover {
-      color: var(--acid);
-    }
-
-    .node-breadcrumb-path .crumb-sep {
-      font-size: 0.7rem;
-      color: rgba(245, 245, 240, 0.2);
-    }
-
-    .node-breadcrumb-path .crumb.active {
-      color: var(--acid);
-    }
-
-    .node-meta-bar {
-      display: flex;
-      align-items: center;
-      gap: 16px;
-      flex-wrap: wrap;
-      animation: fade-in-up 0.5s ease forwards;
-      animation-delay: 0.2s;
-      opacity: 0;
-    }
-
-    .node-meta-chip {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      padding: 6px 14px;
-      background: var(--ink-muted);
-      border: 1px solid rgba(245, 245, 240, 0.1);
-      border-radius: 100px;
-      font-size: 0.78rem;
-      font-weight: 700;
-      color: rgba(245, 245, 240, 0.6);
-    }
-
-    .node-meta-chip.custom {
-      background: rgba(78, 205, 196, 0.1);
-      border-color: var(--sky);
-      color: var(--sky);
-    }
-
-    /* ── Content Card ── */
-    .node-content-card {
-      background: var(--ink-soft);
-      border: 2px solid rgba(245, 245, 240, 0.1);
-      border-radius: var(--radius-xl);
-      padding: 40px;
-      margin-bottom: 24px;
-      box-shadow: var(--shadow-clay);
-      animation: fade-in-up 0.6s ease forwards;
-      animation-delay: 0.25s;
-      opacity: 0;
-    }
-
-    .node-content-card h4 {
-      color: var(--acid);
-      font-size: 1.15rem;
-      font-weight: 800;
-      margin-bottom: 16px;
-      padding-bottom: 12px;
-      border-bottom: 2px solid rgba(191, 255, 0, 0.15);
-    }
-
-    .node-content-text {
-      font-size: 1.02rem;
-      line-height: 1.85;
-      color: rgba(245, 245, 240, 0.85);
-      font-weight: 400;
-      max-width: 800px;
-    }
-
-    .node-content-text p {
-      margin-bottom: 16px;
-      font-size: 1.02rem;
-      line-height: 1.85;
-      color: rgba(245, 245, 240, 0.85);
-    }
-
-    /* ── Empty / Loading States ── */
-    .node-loading {
-      text-align: center;
-      padding: 80px 20px;
-    }
-
-    .node-loading .spinner {
-      width: 48px;
-      height: 48px;
-      border: 4px solid rgba(245, 245, 240, 0.1);
-      border-top-color: var(--acid);
-      border-radius: 50%;
-      animation: spin 0.8s linear infinite;
-      margin: 0 auto 24px;
-    }
-
-    @keyframes spin {
-      to {
-        transform: rotate(360deg);
-      }
-    }
-
-    .node-empty {
-      text-align: center;
-      padding: 80px 20px;
-      color: rgba(245, 245, 240, 0.35);
-    }
-
-    .node-empty .empty-icon {
-      font-size: 3.5rem;
-      margin-bottom: 16px;
-      opacity: 0.6;
-    }
-
-    /* ── Children List ── */
-    .node-children-section {
-      margin-top: 40px;
-      animation: fade-in-up 0.6s ease forwards;
-      animation-delay: 0.35s;
-      opacity: 0;
-    }
-
-    .node-children-title {
-      font-size: 1rem;
-      font-weight: 800;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      color: rgba(245, 245, 240, 0.45);
-      margin-bottom: 16px;
-    }
-
-    .node-child-item {
-      display: flex;
-      align-items: center;
-      gap: 14px;
-      padding: 16px 20px;
-      background: var(--ink-soft);
-      border: 2px solid rgba(245, 245, 240, 0.08);
-      border-radius: var(--radius-md);
-      margin-bottom: 8px;
-      cursor: pointer;
-      transition: all 0.2s;
-      text-decoration: none;
-      color: var(--white);
-    }
-
-    .node-child-item:hover {
-      border-color: var(--acid);
-      background: var(--acid-glow);
-      transform: translateX(6px);
-    }
-
-    .node-child-icon {
-      width: 40px;
-      height: 40px;
-      background: var(--ink-muted);
-      border: 2px solid rgba(245, 245, 240, 0.12);
-      border-radius: var(--radius-sm);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 1.1rem;
-      flex-shrink: 0;
-    }
-
-    .node-child-item:hover .node-child-icon {
-      background: var(--acid-glow);
-      border-color: var(--acid);
-    }
-
-    .node-child-label {
-      font-weight: 700;
-      font-size: 0.95rem;
-    }
-
-    .node-child-arrow {
-      margin-left: auto;
-      color: rgba(245, 245, 240, 0.2);
-      font-size: 0.8rem;
-      transition: color 0.2s, transform 0.2s;
-    }
-
-    .node-child-item:hover .node-child-arrow {
-      color: var(--acid);
-      transform: translateX(4px);
-    }
-
-    /* ── Back button ── */
-    .back-btn {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 10px 20px;
-      background: var(--ink-muted);
-      border: 2px solid rgba(245, 245, 240, 0.15);
-      border-radius: var(--radius-md);
-      color: var(--white);
-      font-family: var(--font);
-      font-size: 0.88rem;
-      font-weight: 700;
-      cursor: pointer;
-      transition: all 0.2s;
-      text-decoration: none;
-      margin-bottom: 24px;
-    }
-
-    .back-btn:hover {
-      border-color: var(--acid);
-      background: var(--acid-glow);
-      color: var(--acid);
-    }
-
-    .back-btn .arrow {
-      transition: transform 0.2s;
-    }
-
-    .back-btn:hover .arrow {
-      transform: translateX(-4px);
-    }
-
-    @media (max-width: 768px) {
-      .node-content-card {
-        padding: 24px 20px;
-      }
-
-      .node-page-hero {
-        padding: 32px 0 24px;
-      }
+    @media (prefers-contrast: more) {
+      .v2 .tema-bar { background: var(--bg); backdrop-filter: none; border-bottom: 2px solid var(--text-4); }
+      .v2 .toc a.aqui { outline: 1px solid var(--acid); }
     }
   </style>
 </head>
-
 <body class="v2">
 
+<!-- Barra flotante: aparece al bajar y lleva de vuelta por el mismo camino -->
+<div class="tema-bar" id="tema-bar" aria-hidden="true">
+  <a href="ciencias-sociales.html" class="btn btn-text btn-icon-only" aria-label="Volver a la ruta" data-volver><i data-icon="back" data-size="18"></i></a>
+  <span class="tema-bar-txt">
+    <strong data-bar-titulo>Tema</strong>
+    <small data-bar-sub></small>
+  </span>
+  <button type="button" class="btn btn-primary btn-sm" data-practicar hidden><i data-icon="play" data-size="16"></i><span>Practicar</span></button>
+  <span class="tema-leido" id="tema-leido"></span>
+</div>
 
-  <div class="v2-wrap">
+<main class="page" id="main">
 
+  <a href="ciencias-sociales.html" class="btn btn-text" style="align-self:flex-start;margin-left:-12px" data-volver>
+    <i data-icon="back" data-size="18"></i><span>Volver a la ruta</span>
+  </a>
 
-    <!-- ── MAIN CONTENT ── -->
-    <main class="page" id="main">
-      <!-- Back Button -->
-      <a href="ciencias-sociales.html" class="back-btn" id="back-btn">
-        <span class="arrow">←</span> Volver a Ciencias Sociales
-      </a>
+  <!-- ── Cabecera del tema ── -->
+  <header class="tema-head" id="tema-head">
+    <nav class="crumbs" id="tema-crumbs" aria-label="Ruta de navegación">
+      <a href="dashboard.html">Inicio</a>
+      <span class="sep">/</span>
+      <a href="ciencias-sociales.html">Ciencias Sociales</a>
+    </nav>
 
-      <!-- Node Hero Area -->
-      <div class="node-page-hero" id="node-hero">
-        <div class="node-breadcrumb-path" id="node-breadcrumb">
-          <a href="dashboard.html" class="crumb">Inicio</a>
-          <span class="crumb-sep">→</span>
-          <a href="ciencias-sociales.html" class="crumb">Ciencias Sociales</a>
-          <span class="crumb-sep">→</span>
-          <span class="crumb active" id="breadcrumb-current">Cargando...</span>
-        </div>
-        <div class="node-icon-large" id="node-icon">📌</div>
-        <h1 class="node-title" id="node-title">Cargando...</h1>
-        <div class="node-meta-bar" id="node-meta">
-          <!-- Meta chips injected here -->
-        </div>
+    <div class="tema-titulo">
+      <span class="tema-ico dim" id="tema-ico"><i data-icon="book" data-size="26"></i></span>
+      <div class="stack gap-8" style="min-width:0">
+        <h1 id="tema-nombre">Cargando…</h1>
+        <p class="tema-desc" id="tema-desc" hidden></p>
       </div>
+    </div>
 
-      <!-- Node Content Area (material de estudio) -->
-      <div id="node-content-area">
-        <div class="node-loading">
-          <div class="spinner"></div>
-          <p style="font-weight:600;color:rgba(245,245,240,0.5)">Cargando contenido…</p>
-        </div>
-      </div>
+    <div class="tema-chips" id="tema-chips">
+      <div class="skel" style="height:14px;width:220px"></div>
+    </div>
 
-      <!-- Children List -->
-      <div class="node-children-section" id="node-children-section" style="display:none;">
-        <div class="node-children-title">📚 Subtemas</div>
-        <div id="node-children-list"></div>
-      </div>
+    <div class="tema-acciones" id="tema-acciones"></div>
+  </header>
 
-      <!-- Node Navigation -->
-      <div class="node-navigation" id="node-navigation"
-        style="display:none; margin-top: 48px; padding-top: 24px; border-top: 2px solid rgba(245, 245, 240, 0.08); align-items: center; justify-content: space-between; gap: 16px;">
-        <button id="btn-prev-node" class="btn btn-outline"
-          style="max-width: 48%; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;"></button>
-        <button id="btn-next-node" class="btn btn-primary"
-          style="max-width: 48%; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;"></button>
+  <!-- ── Cuerpo ── -->
+  <div class="grid-main-side side-360" id="tema-grid">
+    <div id="tema-contenido">
+      <div class="clay mat">
+        <div class="skel" style="height:18px;width:45%;margin-bottom:18px"></div>
+        <div class="skel" style="height:12px;margin-bottom:10px"></div>
+        <div class="skel" style="height:12px;width:92%;margin-bottom:10px"></div>
+        <div class="skel" style="height:12px;width:80%"></div>
       </div>
-    </main>
+    </div>
+
+    <aside class="tema-aside" id="tema-aside" hidden></aside>
   </div>
 
+  <nav class="tema-prevnext" id="tema-prevnext" hidden aria-label="Temas anterior y siguiente"></nav>
 
-  <script src="js/config.js?v=1.0.2"></script>
-  <script src="js/api.js?v=1.0.2"></script>
-  <script src="js/state.js?v=1.0.2"></script>
-  <script src="js/ui.js?v=2.1.0"></script>
-  <script src="js/shell.js?v=2.1.0"></script>
-  <script src="js/pages/page-nodo.js?v=1.0.2"></script>
-  <script src="js/app.js?v=1.0.2"></script>
+</main>
+
+<script src="js/config.js?v=2.2.0"></script>
+<script src="js/api.js?v=2.2.0"></script>
+<script src="js/state.js?v=2.2.0"></script>
+<script src="js/ui.js?v=2.2.0"></script>
+<script src="js/shell.js?v=2.2.0"></script>
+<script src="js/progreso-ruta.js?v=2.2.0"></script>
+<script src="js/pages/page-nodo.js?v=2.2.0"></script>
+<script src="js/app.js?v=2.2.0"></script>
 </body>
-
 </html>
