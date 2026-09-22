@@ -53,14 +53,34 @@ const getModel = (modelOverride = null) => {
   });
 };
 
-const MODELOS_FALLBACK = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-2.5-flash-lite'];
+// Modelos de respaldo, en orden. gemini-2.0-flash ya fue retirado por Google
+// y gemini-2.5-flash-lite no está disponible para proyectos nuevos (responde
+// 404), así que ya no sirven como respaldo. Se pueden cambiar sin tocar el
+// código con GEMINI_FALLBACK_MODELS="modelo1,modelo2".
+const MODELOS_FALLBACK = (process.env.GEMINI_FALLBACK_MODELS || 'gemini-3.5-flash-lite,gemini-3.5-flash')
+  .split(',')
+  .map(m => m.trim())
+  .filter(Boolean);
+
+// Modelos que Google respondió como inexistentes (404) mientras corre este
+// proceso. No se vuelven a intentar hasta el siguiente despliegue.
+const modelosNoDisponibles = new Set();
+const marcarModeloNoDisponible = (nombre) => {
+  if (!modelosNoDisponibles.has(nombre)) {
+    modelosNoDisponibles.add(nombre);
+    logger.warn(`[gemini] El modelo ${nombre} no está disponible (404); se deja de usar.`);
+  }
+};
 
 const getModelConFallback = () => {
   const modeloPrincipal = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
-  return [
+  const lista = [
     modeloPrincipal,
     ...MODELOS_FALLBACK.filter(m => m !== modeloPrincipal)
   ];
+  const vivos = lista.filter(m => !modelosNoDisponibles.has(m));
+  // Si por algún motivo se marcaron todos, se vuelve a intentar con el principal.
+  return vivos.length ? vivos : [modeloPrincipal];
 };
 
 /**
@@ -80,4 +100,4 @@ const testConnection = async () => {
   }
 };
 
-module.exports = { getModel, getModelConFallback, testConnection };
+module.exports = { getModel, getModelConFallback, marcarModeloNoDisponible, testConnection };

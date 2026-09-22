@@ -1,7 +1,7 @@
 'use strict';
 
 const db = require('../config/db');
-const { getModel, getModelConFallback } = require('../config/gemini');
+const { getModel, getModelConFallback, marcarModeloNoDisponible } = require('../config/gemini');
 const logger = require('../utils/logger');
 const bancoRepo = require('../repositories/banco.repo');
 
@@ -44,25 +44,30 @@ const _sinTilde = (s) => s.toLowerCase()
 
 const _validarPregunta = (p) => {
   if (!p.texto_base || typeof p.texto_base !== 'string' || p.texto_base.trim().length < 50) return false;
-  if (!p.enunciado || p.enunciado.length < 20) return false;
-  if (!p.opciones || p.opciones.length !== 4) return false;
+  if (!p.enunciado || typeof p.enunciado !== 'string' || p.enunciado.length < 20) return false;
+  if (!Array.isArray(p.opciones) || p.opciones.length !== 4) return false;
   const correctas = p.opciones.filter(o => o.es_correcta);
   if (correctas.length !== 1) return false;
   for (const op of p.opciones) {
-    if (!op.texto || op.texto.trim() === '') return false;
-    if (!['A', 'B', 'C', 'D'].includes(op.letra.toUpperCase())) return false;
+    if (!op || typeof op.texto !== 'string' || op.texto.trim() === '') return false;
+    // Si a una opción le falta la letra, se descarta solo esta pregunta.
+    // Antes op.letra.toUpperCase() lanzaba un error y se perdía el lote entero.
+    if (typeof op.letra !== 'string' || !['A', 'B', 'C', 'D'].includes(op.letra.toUpperCase())) return false;
   }
   const textos = new Set(p.opciones.map(o => o.texto.toLowerCase().trim()));
   if (textos.size !== 4) return false;
   if (!p.explicacion || p.explicacion.length < 30) return false;
   if (/la opci.n (a|b|c|d) es|la respuesta correcta es/i.test(p.enunciado)) return false;
   if (p.nivel_dificultad != null) {
+    if (typeof p.nivel_dificultad !== 'string') return false;
     if (!['basico', 'medio', 'avanzado'].includes(_sinTilde(p.nivel_dificultad))) return false;
   }
   if (p.respuesta_correcta != null) {
+    if (typeof p.respuesta_correcta !== 'string') return false;
     if (p.respuesta_correcta.toUpperCase() !== correctas[0].letra.toUpperCase()) return false;
   }
   if (p.tipo_contexto != null) {
+    if (typeof p.tipo_contexto !== 'string') return false;
     const tiposValidos = ['noticia', 'situacion', 'definicion', 'caricatura', 'documento_oficial', 'estadistica', 'discurso'];
     if (!tiposValidos.includes(_sinTilde(p.tipo_contexto))) return false;
   }
@@ -427,10 +432,26 @@ Responde ÚNICAMENTE con este JSON exacto, sin texto adicional, sin markdown:
   ]
 }`;
 
+  // Reintentos: hasta 4 intentos "de verdad". Un modelo que responde 404
+  // (retirado o no disponible para el proyecto) se descarta y se pasa al
+  // siguiente SIN gastar un intento. Ante sobrecarga (503/500) o límite de
+  // cuota (429) se reintenta primero con el MISMO modelo tras una espera;
+  // solo si vuelve a fallar se cambia al de respaldo.
+  const MAX_INTENTOS = 4;
   let attempts = 0;
   let lastError = null;
+  let fallosSeguidosMismoModelo = 0;
 
-  while (attempts < 3) {
+  const cambiarModelo = () => {
+    if (modeloActualIdx >= modelosFallback.length - 1) return false;
+    modeloActualIdx++;
+    model = getModel(modelosFallback[modeloActualIdx]);
+    fallosSeguidosMismoModelo = 0;
+    logger.warn(`[ia.service] Cambiando al modelo de respaldo: ${modelosFallback[modeloActualIdx]}`);
+    return true;
+  };
+
+  while (attempts < MAX_INTENTOS) {
     attempts++;
     try {
       const result = await model.generateContent({
@@ -472,28 +493,40 @@ Responde ÚNICAMENTE con este JSON exacto, sin texto adicional, sin markdown:
       return exitosas;
     } catch (err) {
       const detalle = err.errorDetails ? JSON.stringify(err.errorDetails) : (err.status || '');
-      logger.warn(`Intento ${attempts} fallido: ${err.message} ${detalle}`.trim());
+      const modeloUsado = modelosFallback[modeloActualIdx];
+      logger.warn(`[ia.service] Intento ${attempts}/${MAX_INTENTOS} (${modeloUsado}) fallido: ${err.message} ${detalle}`.trim());
       lastError = err;
-      if (err.message && /401|403/.test(err.message)) break;
-      if (err.message && /404|400|503/.test(err.message)) {
-        if (modeloActualIdx < modelosFallback.length - 1) {
-          modeloActualIdx++;
-          model = getModel(modelosFallback[modeloActualIdx]);
-          logger.warn(`[ia.service] Error en modelo — cambiando a fallback: ${modelosFallback[modeloActualIdx]}`);
-          await new Promise(r => setTimeout(r, 1000));
-          continue;
-        }
-        if (/503/.test(err.message)) {
-          logger.warn('[ia.service] 503 en todos los modelos, esperando 3s...');
-          await new Promise(r => setTimeout(r, attempts * 3000));
-          continue;
-        }
-      }
-      if (err.message && /429/.test(err.message)) {
-        logger.warn('[ia.service] Rate limit (429), esperando 10s...');
-        await new Promise(r => setTimeout(r, 10000));
+      const msg = err.message || '';
+
+      // Clave inválida o sin permisos: no tiene sentido insistir.
+      if (/\b(401|403)\b/.test(msg)) break;
+
+      // Modelo inexistente o retirado: se descarta y no cuenta como intento.
+      if (/\b404\b/.test(msg) || /no longer available|not found/i.test(msg)) {
+        marcarModeloNoDisponible(modeloUsado);
+        attempts--;
+        if (!cambiarModelo()) break;
         continue;
       }
+
+      // Sobrecarga del servicio o cuota: esperar y reintentar.
+      if (/\b(429|500|503)\b/.test(msg) || /overloaded|unavailable|quota|resource.?exhausted/i.test(msg)) {
+        fallosSeguidosMismoModelo++;
+        const espera = /\b429\b|quota|exhausted/i.test(msg) ? 8000 * attempts : 3000 * attempts;
+        if (fallosSeguidosMismoModelo >= 2) cambiarModelo();
+        await new Promise(r => setTimeout(r, espera));
+        continue;
+      }
+
+      // 400 u otro error de la API: se prueba con el siguiente modelo.
+      if (/\b400\b/.test(msg)) {
+        cambiarModelo();
+        await new Promise(r => setTimeout(r, 1000));
+        continue;
+      }
+
+      // JSON cortado, validación fallida, etc.: se reintenta con el mismo modelo.
+      await new Promise(r => setTimeout(r, 1000));
     }
   }
 
@@ -501,10 +534,10 @@ Responde ÚNICAMENTE con este JSON exacto, sin texto adicional, sin markdown:
     id_usuario, accion: 'generar_preguntas', id_materia, id_nodo, dificultad,
     cantidad_pedida: cantidad, cantidad_exitosa: 0,
     tokens_usados, duracion_ms: Date.now() - startTime,
-    exitoso: false, error_mensaje: lastError.message
+    exitoso: false, error_mensaje: lastError ? lastError.message : 'desconocido'
   });
 
-  const customError = new Error(`Fallo tras 3 intentos. Último error: ${lastError.message}`);
+  const customError = new Error(`Fallo tras ${attempts} intentos. Último error: ${lastError ? lastError.message : 'desconocido'}`);
   customError.statusCode = 502;
   throw customError;
 };
@@ -741,8 +774,8 @@ const _mensajeGlobal = (porcentaje) => {
  * las categorías, y se limita el número de temas para no disparar las
  * peticiones a la IA.
  */
-const _elegirNodosParaSimulacro = async (idMateria, cantidad) => {
-  const MAX_TEMAS = parseInt(process.env.IA_TEMAS_POR_SIMULACRO || '4', 10);
+const _elegirNodosParaSimulacro = async (idMateria, cantidad, maxTemas) => {
+  const MAX_TEMAS = Math.max(1, maxTemas || parseInt(process.env.IA_TEMAS_POR_SIMULACRO || '4', 10));
 
   const { rows } = await db.query(
     `SELECT n.id, n.nombre
@@ -811,8 +844,8 @@ const generarSimulacroCompleto = async (opciones) => {
 
   let idsDelBanco = [];
 
-  // Tema al que se le pedirá el relleno si el simulacro queda corto.
-  let nodoRelleno = { id: null, nombre: 'Temas Generales' };
+  // Temas a los que se les pedirá el relleno si el simulacro queda corto.
+  let nodosRelleno = [{ id: null, nombre: 'Temas Generales' }];
 
   if (id_nodo) {
     // ── PRÁCTICA: solo banco ─────────────────────────────────────────────
@@ -846,7 +879,19 @@ const generarSimulacroCompleto = async (opciones) => {
     // preguntas quedaban sin nodo, así que ningún simulacro alimentaba el
     // progreso por tema. Ahora se eligen temas reales del árbol y cada
     // pregunta nace sabiendo a cuál pertenece.
-    const nodos = await _elegirNodosParaSimulacro(id_materia, cantidad);
+    // El simulacro se pide en DOS paquetes (5 + 5 para un simulacro de 10),
+    // cada uno sobre un tema distinto. Un solo paquete de 10 preguntas largas
+    // (texto base + 4 opciones + explicación) se acerca al límite de tokens de
+    // salida y, si la respuesta se corta, el JSON no se puede leer y se pierden
+    // las 10. Con cuatro paquetes pequeños se multiplicaban las llamadas
+    // simultáneas a Gemini (errores 429) y cada lote de 2 o 3 que perdía una
+    // pregunta en la validación dejaba el simulacro corto.
+    const PAQUETES = Math.max(1, parseInt(process.env.IA_PAQUETES_SIMULACRO || '2', 10));
+    // A cada paquete se le piden unas preguntas de más, porque parte se
+    // descarta en la validación. Lo que sobre de un paquete cubre al otro.
+    const EXTRA = Math.max(0, parseInt(process.env.IA_PREGUNTAS_EXTRA_POR_PAQUETE || '2', 10));
+
+    const nodos = await _elegirNodosParaSimulacro(id_materia, cantidad, PAQUETES);
 
     if (!nodos.length) {
       // Materia sin árbol cargado: se conserva el comportamiento anterior
@@ -867,8 +912,8 @@ const generarSimulacroCompleto = async (opciones) => {
       // Una llamada por tema. La dificultad rota entre temas para que la
       // mezcla global se acerque a la distribución del ICFES sin disparar
       // el número de peticiones a la IA.
-      const ROTACION = ['media', 'facil', 'media', 'dificil'];
-      nodoRelleno = { id: nodos[0].id, nombre: nodos[0].nombre };
+      const ROTACION = ['media', 'facil', 'dificil', 'media'];
+      nodosRelleno = nodos.map(n => ({ id: n.id, nombre: n.nombre }));
 
       const lotes = await Promise.all(
         nodos.map((n, i) => {
@@ -878,7 +923,8 @@ const generarSimulacroCompleto = async (opciones) => {
 
           return generarPreguntas(
             { materia, nodo: n.nombre, subtema: '', nivel: nivelSimulacro,
-              descripcion_nivel: null, dificultad, cantidad: n.cantidad, tipo: 'seleccion_multiple' },
+              descripcion_nivel: null, dificultad,
+              cantidad: Math.min(n.cantidad + EXTRA, 10), tipo: 'seleccion_multiple' },
             { ...contextData, id_nodo: n.id })
             .then(ps => ps.map(q => ({ ...q, _dificultadDB: dificultad, _idNodo: n.id })))
             .catch((err) => {
@@ -888,7 +934,28 @@ const generarSimulacroCompleto = async (opciones) => {
             });
         })
       );
-      todasPreguntas = _shuffle(lotes.flat()).slice(0, cantidad);
+
+      // Cada paquete aporta su cuota; las preguntas sobrantes de un paquete
+      // tapan el hueco del otro. Se descartan enunciados repetidos.
+      const vistos = new Set();
+      const unicas = (lista) => lista.filter(q => {
+        const clave = String(q.enunciado || '').toLowerCase().replace(/\s+/g, ' ').trim();
+        if (!clave || vistos.has(clave)) return false;
+        vistos.add(clave);
+        return true;
+      });
+      const principales = [];
+      const sobrantes   = [];
+      lotes.forEach((lote, i) => {
+        const propias = unicas(lote);
+        principales.push(...propias.slice(0, nodos[i].cantidad));
+        sobrantes.push(...propias.slice(nodos[i].cantidad));
+      });
+      todasPreguntas = _shuffle([
+        ...principales,
+        ...sobrantes.slice(0, Math.max(0, cantidad - principales.length)),
+      ]);
+      logger.info(`[ia.service] Paquetes: ${lotes.map((l, i) => `${nodos[i].nombre}=${l.length}/${nodos[i].cantidad}`).join(', ')} → ${todasPreguntas.length}/${cantidad}`);
     }
   }
 
@@ -904,11 +971,14 @@ const generarSimulacroCompleto = async (opciones) => {
 
      La práctica no pasa por aquí: ya salió completa del banco.              */
   if (!id_nodo) {
-    for (let intento = 1; intento <= 2; intento++) {
+    const MAX_RELLENOS = 3;
+    for (let intento = 1; intento <= MAX_RELLENOS; intento++) {
       const deficit = cantidad - todasPreguntas.length;
       if (deficit <= 0) break;
 
-      logger.warn(`[ia.service] Al simulacro le faltan ${deficit} preguntas; llamada extra ${intento}/2 a la IA.`);
+      // Se alterna el tema para no repetir preguntas del mismo paquete.
+      const nodoRelleno = nodosRelleno[(intento - 1) % nodosRelleno.length];
+      logger.warn(`[ia.service] Al simulacro le faltan ${deficit} preguntas; llamada extra ${intento}/${MAX_RELLENOS} a la IA (${nodoRelleno.nombre}).`);
 
       try {
         // Se piden dos de más porque parte se perderá en la validación.
@@ -919,13 +989,16 @@ const generarSimulacroCompleto = async (opciones) => {
           { ...contextData, id_nodo: nodoRelleno.id }
         );
 
+        const yaEstan = new Set(todasPreguntas.map(q => String(q.enunciado || '').toLowerCase().trim()));
+        const nuevas  = extra.filter(q => !yaEstan.has(String(q.enunciado || '').toLowerCase().trim()));
+
         todasPreguntas = [
           ...todasPreguntas,
-          ...extra.slice(0, deficit).map(q => ({ ...q, _dificultadDB: 'media', _idNodo: nodoRelleno.id })),
+          ...nuevas.slice(0, deficit).map(q => ({ ...q, _dificultadDB: 'media', _idNodo: nodoRelleno.id })),
         ];
       } catch (err) {
+        // Un relleno fallido (p. ej. un 429 pasajero) no cancela los demás.
         logger.error(`[ia.service] Falló la llamada extra ${intento}: ${err.message}`);
-        break;
       }
     }
 
